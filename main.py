@@ -27,37 +27,44 @@ class player:
 
     velocity_resistance = DEFAULT_VELOCITY_RESISTANCE # Current air resistance
     velocity = [0, 0] # Players current velocity
-    player_cord = [0, 0] # Players cordinate
+    cord = [0, 0] # Players cordinate
     player_location = [1920/2, 1080/2] # Player location centred on screen
     
-    def gravity(self):
-        self.velocity[1] -= self.GRAVITY
+    @classmethod
+    def gravity(cls): # Player velocity moves down
+        cls.velocity[1] -= cls.GRAVITY
 
-    def air_resistance(self):
-       self.velocity = [v * self.velocity_resistance for v in self.velocity] # Adds air resistance
+    @classmethod
+    def air_resistance(cls):
+       cls.velocity = [v * cls.velocity_resistance for v in cls.velocity] # Adds air resistance
 
-    def get_player_input(self):
+    @classmethod
+    def get_player_input(cls):
         keys_pressed = pygame.key.get_pressed() #Gets all pressed keys
         
         if keys_pressed[pygame.K_w]:
-            self.velocity[1] += self.VELOCITY_INCREASE # Increase velocity
+            cls.velocity[1] += cls.VELOCITY_INCREASE # Increase velocity
         if keys_pressed[pygame.K_a]:
-            self.velocity[0] += self.VELOCITY_INCREASE # Increase velocity
+            cls.velocity[0] += cls.VELOCITY_INCREASE # Increase velocity
         if keys_pressed[pygame.K_s]:
-            self.velocity[1] -= self.VELOCITY_INCREASE # Increase velocity
+            cls.velocity[1] -= cls.VELOCITY_INCREASE # Increase velocity
         if keys_pressed[pygame.K_d]:
-            self.velocity[0] -= self.VELOCITY_INCREASE # Increase velocity
+            cls.velocity[0] -= cls.VELOCITY_INCREASE # Increase velocity
     
-    def move(self):
-        self.player_cord = [x + y for x, y in zip(self.player_cord, self.velocity)] # Makes player move
+    @classmethod
+    def move(cls):
+        cls.cord = [x + y for x, y in zip(cls.cord, cls.velocity)] # Makes player move
+        
+    @classmethod
+    def bound(cls):
+        if cls.cord[1] < -220: # If player under ground
+            cls.cord[1] = -220 # Make player on ground
+            cls.velocity[1] = 0 # Make player stop moving downward
     
-    def bound(self):
-        if self.player_cord[1] < -220:
-            self.player_cord[1] = -220
-            self.velocity[1] = 0
-    
-    def display(self):
-        pass
+    @classmethod
+    def display(cls):
+        blit_image(sprite.player, cls.player_location) # Draws player on the screen
+
 
 #--------------------Functions--------------------
 
@@ -75,9 +82,18 @@ def render_ground(image, pos): # Calculates positiion of ground, and displays
     pos_x_offset = 300 # Offset of displaying ground reletive to player
     
     for x in range(3): # Display three ground tiles under, and to the left and right of the player 
-        blit_image(sprite.ground, (player_cord[0] + pos_x + pos_x_offset, player_cord[1] + 800), 10) # Draws ground on the screen relitive to player
+        blit_image(sprite.ground, (player.cord[0] + pos_x + pos_x_offset, player.cord[1] + 800), 10) # Draws ground on the screen relitive to player
         pos_x_offset += 1000 # Distance between the ground tiles
- 
+
+def render_sky():
+    if not round(player.cord[1]) or not round(player.cord[1]/500):
+        screen.fill((255, 255, 255))
+    else:
+        print(round(255 - abs(255 / round(player.cord[1]/500))))
+        screen.fill((round(255 - abs(255 / round(player.cord[1]/500))), round(255 - abs(255 / round(player.cord[1]/500))), round(255 - abs(255 / round(player.cord[1]/500)))))
+        ############################Fix the ground make 0
+
+    
 #--------------------Main--------------------
 
 running = True
@@ -93,28 +109,22 @@ while running:
 
     # Get inputs
 
-    
-    
-
-
-    
-    
-    
-
-    
-    
-    
+    player.get_player_input()
+    player.gravity()
+    player.air_resistance()
+    player.move()
+    player.bound()
     
     # Render Backround
     
-    screen.fill((160, 255, 150))
+    render_sky()
 
     # Render 
-    blit_image(sprite.player, player_location) # Draws player on the screen
-    blit_image(sprite.tree, player_cord) # Draws player on the screen
-    
+    blit_image(sprite.tree, player.cord) # Draws player on the screen
 
-    render_ground(sprite.ground, (player_cord[0] + 800, player_cord[1] + 800))
+    player.display()
+    
+    render_ground(sprite.ground, (player.cord[0] + 800, player.cord[1] + 800))
     
     pygame.display.flip()
 
