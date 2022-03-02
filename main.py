@@ -23,7 +23,7 @@ class sprite:
 class player:
     VELOCITY_INCREASE = 0.4 # The amount the player velocity increases each time
     DEFAULT_VELOCITY_RESISTANCE = 0.989 # Air resistance default
-    GRAVITY = 0.12 # Gravity pulling downwards
+    GRAVITY = 0.15 # Gravity pulling downwards
 
     velocity_resistance = DEFAULT_VELOCITY_RESISTANCE # Current air resistance
     velocity = [0, 0] # Players current velocity
@@ -57,14 +57,39 @@ class player:
         
     @classmethod
     def bound(cls):
-        if cls.cord[1] < -220: # If player under ground
-            cls.cord[1] = -220 # Make player on ground
+        if cls.cord[1] < 0: # If player under ground
+            cls.cord[1] = 0 # Make player on ground
             cls.velocity[1] = 0 # Make player stop moving downward
     
     @classmethod
     def display(cls):
         blit_image(sprite.player, cls.player_location) # Draws player on the screen
 
+
+class Level:
+    
+    def __init__(self, size, spawn_pos, *objects):
+        self.size = size
+        self.spawn_pos = spawn_pos
+        self.objects = objects
+        
+        self.ground_tiles = [x for x in range(round(size/1000)+1)]
+        print(self.ground_tiles)
+    
+    def render_ground(self): # Calculates positiion of ground, and displays
+        
+        self.size
+        
+        '''
+        pos_x = -1 * round(player.cord[0] + 800, -3) # Get the pos of player, round to nearest 1000, and make negitive as needs to go in opposite direction from player
+        
+        pos_x_offset = 300 # Offset of displaying ground reletive to player
+        
+        
+        for x in range(3): # Display three ground tiles under, and to the left and right of the player 
+            blit_image(sprite.ground, (player.cord[0] + pos_x + pos_x_offset, player.cord[1] + 580), 10) # Draws ground on the screen relitive to player
+            pos_x_offset += 1000 # Distance between the ground tiles
+        '''
 
 #--------------------Functions--------------------
 
@@ -76,25 +101,17 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
 
     screen.blit(image, pos) #Draw resized image at position given
 
-def render_ground(image, pos): # Calculates positiion of ground, and displays
-    pos_x = -1 * round(pos[0], -3) # Get the pos of player, round to nearest 1000, and make negitive as needs to go in opposite direction from player
-    
-    pos_x_offset = 300 # Offset of displaying ground reletive to player
-    
-    for x in range(3): # Display three ground tiles under, and to the left and right of the player 
-        blit_image(sprite.ground, (player.cord[0] + pos_x + pos_x_offset, player.cord[1] + 800), 10) # Draws ground on the screen relitive to player
-        pos_x_offset += 1000 # Distance between the ground tiles
-
-def render_sky():
-    if not round(player.cord[1]) or not round(player.cord[1]/500):
-        screen.fill((255, 255, 255))
+def display_sky():
+    if not round(player.cord[1]) or not round(player.cord[1]/1000):
+        screen.fill((183, 226, 240))
     else:
-        print(round(255 - abs(255 / round(player.cord[1]/500))))
-        screen.fill((round(255 - abs(255 / round(player.cord[1]/500))), round(255 - abs(255 / round(player.cord[1]/500))), round(255 - abs(255 / round(player.cord[1]/500)))))
-        ############################Fix the ground make 0
+        screen.fill((round(20 + abs(173 / round(player.cord[1]/1000))), round(25 + abs(216 / round(player.cord[1]/1000))), round(25 + abs(230 / round(player.cord[1]/1000)))))
+        
 
     
 #--------------------Main--------------------
+
+level = Level((200, 200), (50, 50), [])
 
 running = True
 while running:
@@ -117,14 +134,14 @@ while running:
     
     # Render Backround
     
-    render_sky()
+    display_sky()
 
     # Render 
     blit_image(sprite.tree, player.cord) # Draws player on the screen
 
     player.display()
     
-    render_ground(sprite.ground, (player.cord[0] + 800, player.cord[1] + 800))
+    level.render_ground()
     
     pygame.display.flip()
 
