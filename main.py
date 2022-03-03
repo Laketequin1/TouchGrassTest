@@ -19,6 +19,7 @@ class sprite:
     player = pygame.image.load(IMAGE_FOLDER+"player.png").convert() #Loads player (convert to be more efficient as non transparent)
     tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
+    roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
 
 class player:
     VELOCITY_INCREASE = 0.4 # The amount the player velocity increases each time
@@ -56,10 +57,20 @@ class player:
         cls.cord = [x + y for x, y in zip(cls.cord, cls.velocity)] # Makes player move
         
     @classmethod
-    def bound(cls):
-        if cls.cord[1] < 0: # If player under ground
-            cls.cord[1] = 0 # Make player on ground
+    def bound(cls, map_rect):
+        if cls.cord[1] < map_rect[1]: # If player under ground
+            cls.cord[1] = map_rect[1] # Make player on ground
             cls.velocity[1] = 0 # Make player stop moving downward
+        elif cls.cord[1] > map_rect[3]: # If player hitting roof
+            cls.cord[1] = map_rect[3] # Player under roof
+            cls.velocity[1] = 0 # Make player stop moving upward
+        
+        if cls.cord[0] < map_rect[0]: # If player hitting left wall
+            cls.cord[0] = map_rect[0] # Make player be on left wall
+            cls.velocity[0] = 0 # Make player stop moving left
+        elif cls.cord[0] > map_rect[2]: # If player hitting right wall
+            cls.cord[0] = map_rect[2] # Player right wall
+            cls.velocity[0] = 0 # Make player stop moving right
     
     @classmethod
     def display(cls):
@@ -68,28 +79,33 @@ class player:
 
 class Level:
     
-    def __init__(self, size, spawn_pos, *objects):
-        self.size = size
+    def __init__(self, map_rect, spawn_pos, *objects):
+        self.map_rect = map_rect
         self.spawn_pos = spawn_pos
         self.objects = objects
-        
-        self.ground_tiles = [x for x in range(round(size/1000)+1)]
-        print(self.ground_tiles)
     
     def render_ground(self): # Calculates positiion of ground, and displays
         
-        self.size
-        
-        '''
-        pos_x = -1 * round(player.cord[0] + 800, -3) # Get the pos of player, round to nearest 1000, and make negitive as needs to go in opposite direction from player
+        pos_x = -1 * round(player.cord[0] + 800, -3) # Get the pos of player, round to nearest 1000, and make negitive as needs to go in opposite dimap_rection from player
         
         pos_x_offset = 300 # Offset of displaying ground reletive to player
-        
         
         for x in range(3): # Display three ground tiles under, and to the left and right of the player 
             blit_image(sprite.ground, (player.cord[0] + pos_x + pos_x_offset, player.cord[1] + 580), 10) # Draws ground on the screen relitive to player
             pos_x_offset += 1000 # Distance between the ground tiles
-        '''
+    
+    def render_roof(self):
+        
+        pos_x = -1 * round(player.cord[0] + 800, -3) # Get the pos of player, round to nearest 1000, and make negitive as needs to go in opposite dimap_rection from player
+        
+        pos_x_offset = 300 # Offset of displaying ground reletive to player
+        
+        for x in range(3): # Display three ground tiles under, and to the left and right of the player 
+            blit_image(sprite.roof, (player.cord[0] + pos_x + pos_x_offset, player.cord[1] - 460), 10) # Draws ground on the screen relitive to player
+            pos_x_offset += 1000 # Distance between the ground tiles
+    
+    def bound_player(self):
+        player.bound(self.map_rect)
 
 #--------------------Functions--------------------
 
@@ -98,7 +114,7 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
     image_height = image.get_height() #Height
     
     image = pygame.transform.scale(image, (round(image_width * size), round(image_height * size))) #Resize image to be relative to the screen, and change its size
-
+    
     screen.blit(image, pos) #Draw resized image at position given
 
 def display_sky():
@@ -111,7 +127,7 @@ def display_sky():
     
 #--------------------Main--------------------
 
-level = Level((200, 200), (50, 50), [])
+level = Level((-200000, 0, 20000, 500), (50, 50), [])
 
 running = True
 while running:
@@ -130,18 +146,19 @@ while running:
     player.gravity()
     player.air_resistance()
     player.move()
-    player.bound()
+    level.bound_player()
     
     # Render Backround
     
     display_sky()
 
     # Render 
-    blit_image(sprite.tree, player.cord) # Draws player on the screen
+    blit_image(sprite.tree, (player.cord[0], player.cord[1] + 540)) # Draws player on the screen
 
     player.display()
     
     level.render_ground()
+    level.render_roof()
     
     pygame.display.flip()
 
