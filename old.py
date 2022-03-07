@@ -124,13 +124,13 @@ def display_sky():
         screen.fill((round(20 + abs(173 / round(player.cord[1]/1000))), round(25 + abs(216 / round(player.cord[1]/1000))), round(25 + abs(230 / round(player.cord[1]/1000)))))
 
 def display_walls():
-    
+    pass
     pygame.draw.rect(screen, (50, 50, 50), (player.cord[0], 0, 20, 5000))
 
     
 #--------------------Main--------------------
 
-current_level = Level((-2000, 0, 1000, 1000), (50, 50), [])
+current_level = Level((-2000, 0, 10000, 1300), (50, 50), [])
 
 running = True
 while running:
