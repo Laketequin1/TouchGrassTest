@@ -1,6 +1,6 @@
 #--------------------Imports--------------------
 
-import pygame
+import pygame, threading
 pygame.init()
 
 from src import color # Imports lots of colors as RGB
@@ -9,7 +9,9 @@ from src import color # Imports lots of colors as RGB
 
 IMAGE_FOLDER = "images/" #The folder that holds all the image files
 DISPLAY_SIZE = (1920, 1080) # Screen size
-DEFAULT_TICK = 120 # Game FPS
+DEFAULT_TICK = 120 # Game tick speed
+
+DEFAULT_FPS = 160 # Game rendering FPS
 
 clock = pygame.time.Clock() # Game tick handling
 
@@ -101,30 +103,38 @@ class player:
     def display(cls):
         blit_image(sprite.player, cls.PLAYER_CENTRE) # Draws player on the screen
     
-        
-    class Level:
     
-        def __init__(self, map_rect, spawn_pos, *objects): # Get all parts of the level
-            self.map_rect = map_rect
-            self.spawn_pos = spawn_pos
-            self.objects = objects
-        
-        def bind_player(self):
-            player.bind(self.map_rect)
-        
-        def display(self):
-            pass
+class Level:
+    def __init__(self, map_size, spawn_pos, *objects): # Get all parts of the level
+        self.map_size = map_size
+        self.map_rect = (0, 0, *map_size) # Rect of map from 0, 0 to map_size
+        self.spawn_pos = spawn_pos
+        self.objects = objects
     
-    #--------------------Main--------------------
+    def bind_player(self):
+        player.bind(self.map_rect)
     
+    def display(self):
+        pass
+    
+#--------------------Main--------------------
+
+current_level = Level((50, 50), (5, 5), ())
+
+def main():
     running = True
     while running:
-        
         # Get Events
+        p = pygame.event.get()
+        if p:
+            print(p)
         for event in pygame.event.get():
+            #print(event.type)
+            #print(pygame.KEYDOWN)
             if event.type == pygame.QUIT: # If exit button pressed
                 running = False # Exit loop
             elif event.type == pygame.KEYDOWN: # Checks for key pressed key
+                print("Keydown\ns")
                 if event.key == pygame.K_ESCAPE: # Checks if escape is pressed
                     running = False # Exit loop
         
@@ -132,4 +142,21 @@ class player:
         player.gravity()
         player.air_resistance()
         player.move()
-        current_level.bound_player()
+        current_level.bind_player()
+        
+    print("main finished")
+
+def render():
+    
+    while thread.is_alive():
+        surface.fill((230, 255, 120))
+        pygame.display.flip()
+        clock.tick(DEFAULT_FPS) #FPS Speed
+            
+
+print("go")
+thread = threading.Thread(target=main)
+thread.start()
+
+render()
+https://stackoverflow.com/questions/56717184/pygame-event-get-not-returning-any-events-when-inside-a-thread
