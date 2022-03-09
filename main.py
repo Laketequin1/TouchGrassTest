@@ -7,15 +7,21 @@ from src import color # Imports lots of colors as RGB
 
 #--------------------Variables--------------------
 
+ORIGINAL_THREAD_COUNT = threading.activeCount()
+
 IMAGE_FOLDER = "images/" #The folder that holds all the image files
 DISPLAY_SIZE = (1920, 1080) # Screen size
 DEFAULT_TICK = 120 # Game tick speed
 
 DEFAULT_FPS = 160 # Game rendering FPS
 
+GROUND_Y_OFFSET = 800 # The ground pos relitive to top screen when player on y 0
+
 clock = pygame.time.Clock() # Game tick handling
 
 surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen 
+
+finished = False
 
 class sprite:
     player = pygame.image.load(IMAGE_FOLDER+"player.png").convert() #Loads player (convert to be more efficient as non transparent)
@@ -33,10 +39,24 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
     
     surface.blit(image, pos) #Draw resized image at position given
 
-def render_ground(self): # Calculates positiion of ground, and displays
-    pass
+def render_ground(): # Calculates positiion of ground, and displays
+    GROUND_SIZE = 10
+    
+    player_x, player_y = player.get_pos()
+    
+    ground_width = sprite.ground.get_width() * GROUND_SIZE
+    ground_height = sprite.ground.get_height() * GROUND_SIZE
+    
+    ground_x = player_x - ground_width / 2
+    
+    ground_x_offset = -ground_width
+    
+    for x in range(3):
+        ground_x_offset += ground_width
+        blit_image(sprite.ground, (ground_x + ground_x_offset, GROUND_Y_OFFSET), GROUND_SIZE)
+    
 
-def render_roof(self): # Calculates positiion of roof, and displays
+def render_roof(): # Calculates positiion of roof, and displays
     pass
 
 #--------------------Classes--------------------
@@ -57,6 +77,15 @@ class player:
     @classmethod
     def get_rect(cls): # Return the left of player, top of player, right of player, bottom of player
         return (cls.pos[0] - cls.SIZE[0], cls.pos[1] - cls.SIZE[1], cls.pos[0] + cls.SIZE[0], cls.pos[1] + cls.SIZE[1])
+
+    @classmethod
+    def get_pos(cls): # Return centre of player with relitivity to screen
+        return (cls.pos[0] + cls.PLAYER_CENTRE[0], cls.pos[1] + cls.PLAYER_CENTRE[1])
+    
+    @classmethod
+    def set_pos(cls, pos): # Set centre of player with relitivity to screen
+        cls.pos[0] = pos[0] - cls.PLAYER_CENTRE[0]
+        cls.pos[1] = pos[1] - cls.PLAYER_CENTRE[1]
     
     @classmethod
     def gravity(cls): # Player velocity moves down
@@ -110,31 +139,30 @@ class Level:
         self.map_rect = (0, 0, *map_size) # Rect of map from 0, 0 to map_size
         self.spawn_pos = spawn_pos
         self.objects = objects
+        
+        player.set_pos(spawn_pos)
     
-    def bind_player(self):
+    def bind_player(self): # Player stays in map
         player.bind(self.map_rect)
     
-    def display(self):
-        pass
+    def display(self): # Display map
+        pygame.draw.rect(surface, color.ORANGE, pygame.Rect(*self.map_rect))
+        print(player.get_pos())
+        render_ground()
+        render_roof()
     
 #--------------------Main--------------------
 
-current_level = Level((50, 50), (5, 5), ())
+current_level = Level((50000, 50), (0, 0))
 
 def main():
     running = True
     while running:
         # Get Events
-        p = pygame.event.get()
-        if p:
-            print(p)
         for event in pygame.event.get():
-            #print(event.type)
-            #print(pygame.KEYDOWN)
             if event.type == pygame.QUIT: # If exit button pressed
                 running = False # Exit loop
             elif event.type == pygame.KEYDOWN: # Checks for key pressed key
-                print("Keydown\ns")
                 if event.key == pygame.K_ESCAPE: # Checks if escape is pressed
                     running = False # Exit loop
         
@@ -143,20 +171,23 @@ def main():
         player.air_resistance()
         player.move()
         current_level.bind_player()
-        
-    print("main finished")
+
+        clock.tick(DEFAULT_TICK) #FPS Speed
 
 def render():
     
-    while thread.is_alive():
-        surface.fill((230, 255, 120))
+    while threading.main_thread().is_alive():
+        
+        # Render
+        surface.fill(color.SKYBLUE)
+        
+        player.display()
+        current_level.display()
+        
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
             
-
-print("go")
-thread = threading.Thread(target=main)
+thread = threading.Thread(target=render)
 thread.start()
 
-render()
-https://stackoverflow.com/questions/56717184/pygame-event-get-not-returning-any-events-when-inside-a-thread
+main()
