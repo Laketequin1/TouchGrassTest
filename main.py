@@ -191,5 +191,3 @@ thread = threading.Thread(target=render)
 thread.start()
 
 main()
-
-print("start")
