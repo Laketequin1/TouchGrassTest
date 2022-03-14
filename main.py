@@ -15,7 +15,8 @@ DEFAULT_TICK = 120 # Game tick speed
 
 DEFAULT_FPS = 160 # Game rendering FPS
 
-GROUND_Y_OFFSET = 800 # The ground pos relitive to top screen when player on y 0
+RENDER_Y_OFFSET = 800 # The ground pos relitive to top screen when player on y 0
+RENDER_X_OFFSET = None # The left pos relitive to player on screen when player on x
 
 clock = pygame.time.Clock() # Game tick handling
 
@@ -39,27 +40,28 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
     
     surface.blit(image, pos) #Draw resized image at position given
 
-def render_ground(): # Calculates positiion of ground, and displays
-    GROUND_SIZE = 10
+def render_ground(): # Calculates positiion of ground, and displays    
+    _, player_y = player.get_pos()
     
-    player_x, player_y = player.get_pos()
-    
-    ground_width = sprite.ground.get_width() * GROUND_SIZE
-    ground_height = sprite.ground.get_height() * GROUND_SIZE
-    
-    ground_x = player_x - ground_width / 2
-    
-    ground_x_offset = -ground_width
-    
-    for x in range(3):
-        ground_x_offset += ground_width
-        blit_image(sprite.ground, (ground_x + ground_x_offset, GROUND_Y_OFFSET), GROUND_SIZE)
+    pygame.draw.rect(surface, color.BURLYWOOD, pygame.Rect(0, RENDER_Y_OFFSET + player_y, DISPLAY_SIZE[0], DISPLAY_SIZE[1]))
     
 
 def render_roof(): # Calculates positiion of roof, and displays
     pass
 
 #--------------------Classes--------------------
+'''
+class Trail:
+    def __init__(self, pos):
+        self.pos = pos
+        self.trails = []
+        for i in range(50)
+            self.trails.append(player)
+'''
+# Raise custom error
+class TwoInputsOfSameAxis(Exception):
+    def __init__(self, value1, value2, x_or_y):
+        super().__init__("The sides {} and {} are both being set on the {} axis".format(value1, value2, x_or_y))
 
 class player:
     SCREEN_CENTRE = (1920/2, 1080/2) # Player location centred on screen
@@ -83,9 +85,34 @@ class player:
         return (cls.pos[0] + cls.PLAYER_CENTRE[0], cls.pos[1] + cls.PLAYER_CENTRE[1])
     
     @classmethod
-    def set_pos(cls, pos): # Set centre of player with relitivity to screen
-        cls.pos[0] = pos[0] - cls.PLAYER_CENTRE[0]
-        cls.pos[1] = pos[1] - cls.PLAYER_CENTRE[1]
+    def get_rel_pos(cls): # Return centre of player with relitivity to screen
+        return (cls.pos[0] + cls.PLAYER_CENTRE[0] + RENDER_X_OFFSET, cls.pos[1] + cls.PLAYER_CENTRE[1] + RENDER_Y_OFFSET)
+    
+    @classmethod
+    def set_pos(cls, pos=(None, None), **kwargs):
+        
+        # Set player's position at its centre to pos.
+        # Has ability to input left, right, top, bottom of player to a pos, which overides pos
+        
+        if kwargs:
+            
+            if 'left' in kwargs and 'right' in kwargs:
+                raise TwoInputsOfSameAxis('left', 'right', 'x')
+            elif 'left' in kwargs:
+                cls.pos[0] = kwargs['left'] + cls.SIZE[0] / 2
+            elif 'right' in kwargs:
+                cls.pos[0] = kwargs['right'] - cls.SIZE[0] / 2
+            elif pos[0]:
+                cls.pos[0] = pos[0] - cls.PLAYER_CENTRE[0]
+                
+            if 'top' in kwargs and 'bottom' in kwargs:
+                raise TwoInputsOfSameAxis('top', 'bottom', 'y')
+            elif 'top' in kwargs:
+                cls.pos[1] = kwargs['top'] + cls.SIZE[1] / 2
+            elif 'bottom' in kwargs:
+                cls.pos[1] = kwargs['bottom'] - cls.SIZE[1] / 2
+            elif pos[1]:
+                cls.pos[1] = pos[1] - cls.PLAYER_CENTRE[1]
     
     @classmethod
     def gravity(cls): # Player velocity moves down
@@ -114,20 +141,20 @@ class player:
     
     @classmethod
     def bind(cls, map_rect): # Binds player to map
-        if cls.pos[1] < map_rect[1]: # If player under ground
-            cls.pos[1] = map_rect[1] # Make player on ground
-            cls.velocity[1] = 0 # Make player stop moving downward
-        elif cls.pos[1] > map_rect[3]: # If player hitting roof
-            cls.pos[1] = map_rect[3] # Player under roof
-            cls.velocity[1] = 0 # Make player stop moving upward
         
-        if cls.pos[0] < map_rect[0]: # If player hitting left wall
-            cls.pos[0] = map_rect[0] # Make player be on left wall
-            cls.velocity[0] = 0 # Make player stop moving left
-        elif cls.pos[0] > map_rect[2]: # If player hitting right wall
-            cls.pos[0] = map_rect[2] # Player right wall
-            cls.velocity[0] = 0 # Make player stop moving right
-    
+        player_left, player_top, player_right, player_bottom = player.get_rect()
+        
+        if player_left < map_rect[0]:
+            player.set_pos(left=map_rect[0])
+        elif player_right < map_rect[2]:
+            player.set_pos(right=map_rect[2])
+        
+        if player_top < map_rect[1]:
+            player.set_pos(top=map_rect[1])
+        if player_bottom < map_rect[3]:
+            player.set_pos(bottom=map_rect[3])
+
+        
     @classmethod
     def display(cls):
         blit_image(sprite.player, cls.PLAYER_CENTRE) # Draws player on the screen
@@ -136,7 +163,7 @@ class player:
 class Level:
     def __init__(self, map_size, spawn_pos, *objects): # Get all parts of the level
         self.map_size = map_size
-        self.map_rect = (0, 0, *map_size) # Rect of map from 0, 0 to map_size
+        self.map_rect = (0, RENDER_Y_OFFSET - map_size[1], map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
         self.spawn_pos = spawn_pos
         self.objects = objects
         
@@ -147,13 +174,12 @@ class Level:
     
     def display(self): # Display map
         pygame.draw.rect(surface, color.ORANGE, pygame.Rect(*self.map_rect))
-        print(player.get_pos())
         render_ground()
         render_roof()
     
 #--------------------Main--------------------
 
-current_level = Level((50000, 50), (0, 0))
+current_level = Level((200, 250), (0, 0))
 
 def main():
     running = True
@@ -181,8 +207,8 @@ def render():
         # Render
         surface.fill(color.SKYBLUE)
         
-        player.display()
         current_level.display()
+        player.display()
         
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
