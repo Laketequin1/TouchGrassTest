@@ -15,8 +15,8 @@ DEFAULT_TICK = 120 # Game tick speed
 
 DEFAULT_FPS = 160 # Game rendering FPS
 
-RENDER_Y_OFFSET = 800 # The ground pos relitive to top screen when player on y 0
-RENDER_X_OFFSET = None # The left pos relitive to player on screen when player on x
+RENDER_OFFSET = (1920 / 2 - 20, 1080 / 2 - 20) # The pos of items being rendered at 0, 0
+GROUND_OFFSET = 800 # The ground pos relitive to top screen when player on y
 
 clock = pygame.time.Clock() # Game tick handling
 
@@ -29,7 +29,7 @@ class sprite:
     tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
-
+    enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert()
 #--------------------Functions--------------------
 
 def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
@@ -40,24 +40,18 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
     
     surface.blit(image, pos) #Draw resized image at position given
 
+
 def render_ground(): # Calculates positiion of ground, and displays    
     _, player_y = player.get_pos()
     
-    pygame.draw.rect(surface, color.BURLYWOOD, pygame.Rect(0, RENDER_Y_OFFSET + player_y, DISPLAY_SIZE[0], DISPLAY_SIZE[1]))
+    pygame.draw.rect(surface, color.BURLYWOOD, pygame.Rect(0, GROUND_OFFSET + player_y, DISPLAY_SIZE[0], DISPLAY_SIZE[1]))
     
 
 def render_roof(): # Calculates positiion of roof, and displays
     pass
 
 #--------------------Classes--------------------
-'''
-class Trail:
-    def __init__(self, pos):
-        self.pos = pos
-        self.trails = []
-        for i in range(50)
-            self.trails.append(player)
-'''
+
 # Raise custom error
 class TwoInputsOfSameAxis(Exception):
     def __init__(self, value1, value2, x_or_y):
@@ -86,7 +80,7 @@ class player:
     
     @classmethod
     def get_rel_pos(cls): # Return centre of player with relitivity to screen
-        return (cls.pos[0] + cls.PLAYER_CENTRE[0] + RENDER_X_OFFSET, cls.pos[1] + cls.PLAYER_CENTRE[1] + RENDER_Y_OFFSET)
+        return (cls.pos[0] + cls.PLAYER_CENTRE[0] + RENDER_OFFSET[0], cls.pos[1] + cls.PLAYER_CENTRE[1] + RENDER_OFFSET[1])
     
     @classmethod
     def set_pos(cls, pos=(None, None), **kwargs):
@@ -103,7 +97,7 @@ class player:
             elif 'right' in kwargs:
                 cls.pos[0] = kwargs['right'] - cls.SIZE[0] / 2
             elif pos[0]:
-                cls.pos[0] = pos[0] - cls.PLAYER_CENTRE[0]
+                cls.pos[0] = pos[0] - cls.SIZE[0] / 2
                 
             if 'top' in kwargs and 'bottom' in kwargs:
                 raise TwoInputsOfSameAxis('top', 'bottom', 'y')
@@ -112,7 +106,10 @@ class player:
             elif 'bottom' in kwargs:
                 cls.pos[1] = kwargs['bottom'] - cls.SIZE[1] / 2
             elif pos[1]:
-                cls.pos[1] = pos[1] - cls.PLAYER_CENTRE[1]
+                cls.pos[1] = pos[1] - cls.SIZE[1] / 2
+        else:
+            cls.pos[0] = pos[0] - cls.SIZE[0] / 2
+            cls.pos[1] = pos[1] - cls.SIZE[1] / 2
     
     @classmethod
     def gravity(cls): # Player velocity moves down
@@ -163,23 +160,33 @@ class player:
 class Level:
     def __init__(self, map_size, spawn_pos, *objects): # Get all parts of the level
         self.map_size = map_size
-        self.map_rect = (0, RENDER_Y_OFFSET - map_size[1], map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
+        self.map_rect = (RENDER_OFFSET[0] + player.SIZE[0], RENDER_OFFSET[1] - map_size[1], map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
         self.spawn_pos = spawn_pos
         self.objects = objects
         
-        player.set_pos(spawn_pos)
+        player.set_pos((spawn_pos[0], None), bottom=-spawn_pos[1])
+    
+    def get_player_pos(self):
+        return (player.get_rect()[0], player.get_rect()[3])
     
     def bind_player(self): # Player stays in map
         player.bind(self.map_rect)
     
     def display(self): # Display map
-        pygame.draw.rect(surface, color.ORANGE, pygame.Rect(*self.map_rect))
+        print(self.get_player_pos()[1])
+        pygame.draw.rect(surface, color.ORANGE, pygame.Rect(self.map_rect[0] + self.get_player_pos()[0], self.map_rect[1] + self.get_player_pos()[1], self.map_rect[2], self.map_rect[3]))
         render_ground()
         render_roof()
+
+class enemy:
+    SIZE = sprite.enemy.get_size()
     
+    @classmethod
+    def display(cls):
+        blit_image(sprite.enemy, player.PLAYER_CENTRE)
 #--------------------Main--------------------
 
-current_level = Level((200, 250), (0, 0))
+current_level = Level((200, 250), (10, 10))
 
 def main():
     running = True
@@ -195,8 +202,10 @@ def main():
         player.get_player_input()
         player.gravity()
         player.air_resistance()
-        player.move()
-        current_level.bind_player()
+        #player.move()
+        #trail()
+        #current_level.bind_player()
+        print(player.pos)
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
@@ -209,7 +218,7 @@ def render():
         
         current_level.display()
         player.display()
-        
+        enemy.display()
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
             
