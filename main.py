@@ -40,16 +40,6 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
     
     surface.blit(image, pos) #Draw resized image at position given
 
-
-def render_ground(): # Calculates positiion of ground, and displays    
-    _, player_y = player.get_pos()
-    
-    pygame.draw.rect(surface, color.BURLYWOOD, pygame.Rect(0, GROUND_OFFSET + player_y, DISPLAY_SIZE[0], DISPLAY_SIZE[1]))
-    
-
-def render_roof(): # Calculates positiion of roof, and displays
-    pass
-
 #--------------------Classes--------------------
 
 # Raise custom error
@@ -71,16 +61,16 @@ class player:
     pos = [0, 0] # Players cordinate
     
     @classmethod
-    def get_rect(cls): # Return the left of player, top of player, right of player, bottom of player
-        return (cls.pos[0] - cls.SIZE[0], cls.pos[1] - cls.SIZE[1], cls.pos[0] + cls.SIZE[0], cls.pos[1] + cls.SIZE[1])
+    def get_rel_offset_rect(cls): # Return the left of player, top of player, right of player, bottom of player with relitive to objects on screen
+        return (cls.pos[0] - cls.SIZE[0], cls.pos[1], cls.pos[0], cls.pos[1] + cls.SIZE[1])
+
+    @classmethod
+    def get_rect(cls): # Return the left of player, top of player, right of player, bottom of player cords in map
+        return (-1 * cls.pos[0], cls.pos[1] + cls.SIZE[1], -1 * cls.pos[0] + cls.SIZE[0], cls.pos[1])
 
     @classmethod
     def get_pos(cls): # Return centre of player with relitivity to screen
-        return (cls.pos[0] + cls.PLAYER_CENTRE[0], cls.pos[1] + cls.PLAYER_CENTRE[1])
-    
-    @classmethod
-    def get_rel_pos(cls): # Return centre of player with relitivity to screen
-        return (cls.pos[0] + cls.PLAYER_CENTRE[0] + RENDER_OFFSET[0], cls.pos[1] + cls.PLAYER_CENTRE[1] + RENDER_OFFSET[1])
+        return (cls.pos[0], cls.pos[1])
     
     @classmethod
     def set_pos(cls, pos=(None, None), **kwargs):
@@ -93,18 +83,18 @@ class player:
             if 'left' in kwargs and 'right' in kwargs:
                 raise TwoInputsOfSameAxis('left', 'right', 'x')
             elif 'left' in kwargs:
-                cls.pos[0] = kwargs['left'] + cls.SIZE[0] / 2
+                cls.pos[0] = -kwargs['left']
             elif 'right' in kwargs:
-                cls.pos[0] = kwargs['right'] - cls.SIZE[0] / 2
+                cls.pos[0] = -kwargs['right'] + cls.SIZE[0]
             elif pos[0]:
                 cls.pos[0] = pos[0] - cls.SIZE[0] / 2
                 
             if 'top' in kwargs and 'bottom' in kwargs:
                 raise TwoInputsOfSameAxis('top', 'bottom', 'y')
             elif 'top' in kwargs:
-                cls.pos[1] = kwargs['top'] + cls.SIZE[1] / 2
+                cls.pos[1] = kwargs['top'] - cls.SIZE[1]
             elif 'bottom' in kwargs:
-                cls.pos[1] = kwargs['bottom'] - cls.SIZE[1] / 2
+                cls.pos[1] = kwargs['bottom']
             elif pos[1]:
                 cls.pos[1] = pos[1] - cls.SIZE[1] / 2
         else:
@@ -141,42 +131,47 @@ class player:
         
         player_left, player_top, player_right, player_bottom = player.get_rect()
         
+        print(f"\nplayer rect: {player_left, player_top, player_right, player_bottom}")
+        
+        print(f"map: {map_rect}\n")
+        
         if player_left < map_rect[0]:
+            print("left")
             player.set_pos(left=map_rect[0])
-        elif player_right < map_rect[2]:
+        elif player_right > map_rect[2]:
+            print("right")
             player.set_pos(right=map_rect[2])
         
         if player_top < map_rect[1]:
+            print("top")
             player.set_pos(top=map_rect[1])
-        if player_bottom < map_rect[3]:
+        elif player_bottom > map_rect[3]:
+            print("bottom")
             player.set_pos(bottom=map_rect[3])
 
         
     @classmethod
     def display(cls):
-        blit_image(sprite.player, cls.PLAYER_CENTRE) # Draws player on the screen
+        blit_image(sprite.player, player.PLAYER_CENTRE) # Draws player on centre of the screen
     
     
 class Level:
     def __init__(self, map_size, spawn_pos, *objects): # Get all parts of the level
         self.map_size = map_size
-        self.map_rect = (RENDER_OFFSET[0] + player.SIZE[0], RENDER_OFFSET[1] - map_size[1], map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
+        self.map_rect = (0, 0, map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
         self.spawn_pos = spawn_pos
         self.objects = objects
         
-        player.set_pos((spawn_pos[0], None), bottom=-spawn_pos[1])
+        player.set_pos(left=spawn_pos[0], bottom=spawn_pos[1])
     
     def get_player_pos(self):
-        return (player.get_rect()[0], player.get_rect()[3])
+        return (player.get_rel_offset_rect()[0], player.get_rel_offset_rect()[3])
     
     def bind_player(self): # Player stays in map
         player.bind(self.map_rect)
     
     def display(self): # Display map
-        print(self.get_player_pos()[1])
-        pygame.draw.rect(surface, color.ORANGE, pygame.Rect(self.map_rect[0] + self.get_player_pos()[0], self.map_rect[1] + self.get_player_pos()[1], self.map_rect[2], self.map_rect[3]))
-        render_ground()
-        render_roof()
+        pygame.draw.rect(surface, color.ORANGE, pygame.Rect(RENDER_OFFSET[0] + player.SIZE[0] + self.get_player_pos()[0], RENDER_OFFSET[1] - self.map_size[1] + self.get_player_pos()[1], self.map_rect[2], self.map_rect[3]))
 
 class enemy:
     SIZE = sprite.enemy.get_size()
@@ -186,7 +181,7 @@ class enemy:
         blit_image(sprite.enemy, player.PLAYER_CENTRE)
 #--------------------Main--------------------
 
-current_level = Level((200, 250), (10, 10))
+current_level = Level((200, 250), (0, 0))
 
 def main():
     running = True
@@ -202,10 +197,10 @@ def main():
         player.get_player_input()
         player.gravity()
         player.air_resistance()
-        #player.move()
-        #trail()
-        #current_level.bind_player()
-        print(player.pos)
+        player.move()
+        current_level.bind_player()
+        
+        print(player.get_rect())
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
@@ -218,7 +213,7 @@ def render():
         
         current_level.display()
         player.display()
-        enemy.display()
+        #enemy.display()
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
             
