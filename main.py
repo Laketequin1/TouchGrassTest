@@ -131,23 +131,19 @@ class player:
         
         player_left, player_top, player_right, player_bottom = player.get_rect()
         
-        print(f"\nplayer rect: {player_left, player_top, player_right, player_bottom}")
-        
-        print(f"map: {map_rect}\n")
-        
         if player_left < map_rect[0]:
-            print("left")
             player.set_pos(left=map_rect[0])
+            player.velocity[0] = 0
         elif player_right > map_rect[2]:
-            print("right")
             player.set_pos(right=map_rect[2])
+            player.velocity[0] = 0
         
-        if player_top < map_rect[1]:
-            print("top")
-            player.set_pos(top=map_rect[1])
-        elif player_bottom > map_rect[3]:
-            print("bottom")
-            player.set_pos(bottom=map_rect[3])
+        if player_bottom < map_rect[1]:
+            player.set_pos(bottom=map_rect[1])
+            player.velocity[1] = 0
+        elif player_top > map_rect[3]:
+            player.set_pos(top=map_rect[3])
+            player.velocity[1] = 0
 
         
     @classmethod
@@ -162,7 +158,7 @@ class Level:
         self.spawn_pos = spawn_pos
         self.objects = objects
         
-        player.set_pos(left=spawn_pos[0], bottom=spawn_pos[1])
+        player.set_pos(right=spawn_pos[0], top=spawn_pos[1])
     
     def get_player_pos(self):
         return (player.get_rel_offset_rect()[0], player.get_rel_offset_rect()[3])
@@ -171,7 +167,7 @@ class Level:
         player.bind(self.map_rect)
     
     def display(self): # Display map
-        pygame.draw.rect(surface, color.ORANGE, pygame.Rect(RENDER_OFFSET[0] + player.SIZE[0] + self.get_player_pos()[0], RENDER_OFFSET[1] - self.map_size[1] + self.get_player_pos()[1], self.map_rect[2], self.map_rect[3]))
+        pygame.draw.rect(surface, color.SKYBLUE2, pygame.Rect(RENDER_OFFSET[0] + player.SIZE[0] + self.get_player_pos()[0], RENDER_OFFSET[1] - self.map_size[1] + self.get_player_pos()[1], self.map_rect[2], self.map_rect[3]))
 
 class enemy:
     SIZE = sprite.enemy.get_size()
@@ -181,7 +177,7 @@ class enemy:
         blit_image(sprite.enemy, player.PLAYER_CENTRE)
 #--------------------Main--------------------
 
-current_level = Level((200, 250), (0, 0))
+current_level = Level((1200, 1200), (200, 1000))
 
 def main():
     running = True
@@ -199,8 +195,6 @@ def main():
         player.air_resistance()
         player.move()
         current_level.bind_player()
-        
-        print(player.get_rect())
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
@@ -209,7 +203,7 @@ def render():
     while threading.main_thread().is_alive():
         
         # Render
-        surface.fill(color.SKYBLUE)
+        surface.fill(color.GRAY20)
         
         current_level.display()
         player.display()
