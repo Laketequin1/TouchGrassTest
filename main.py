@@ -40,9 +40,16 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
     
     surface.blit(image, pos) #Draw resized image at position given
 
+def get_player_pos():
+    return (player.get_rel_offset_rect()[0], player.get_rel_offset_rect()[3]) # Return player pos (bottom left)
+
+def relitive_object_pos(pos, size): # Get render location of object on the screen from object pos relitive to player and size of object
+    pos = [i + j for i, j in zip(pos, get_player_pos())] # x + player_pos_x     and     y + player_pos_y
+    return (RENDER_OFFSET[0] + player.SIZE[0] + pos[0], RENDER_OFFSET[1] - size[1] + pos[1]) # Return relitive pos
+
 #--------------------Classes--------------------
 
-# Raise custom error
+# Raise custom error setting player pos
 class TwoInputsOfSameAxis(Exception):
     def __init__(self, value1, value2, x_or_y):
         super().__init__("The sides {} and {} are both being set on the {} axis".format(value1, value2, x_or_y))
@@ -81,24 +88,24 @@ class player:
         if kwargs:
             
             if 'left' in kwargs and 'right' in kwargs:
-                raise TwoInputsOfSameAxis('left', 'right', 'x')
-            elif 'left' in kwargs:
-                cls.pos[0] = -kwargs['left']
+                raise TwoInputsOfSameAxis('left', 'right', 'x') # Error as there can't have two cords on same axis
+            elif 'left' in kwargs: 
+                cls.pos[0] = -kwargs['left'] # Set left side of player to cord supplied
             elif 'right' in kwargs:
-                cls.pos[0] = -kwargs['right'] + cls.SIZE[0]
+                cls.pos[0] = -kwargs['right'] + cls.SIZE[0] # Set right side of player to cord supplied
             elif pos[0]:
-                cls.pos[0] = pos[0] - cls.SIZE[0] / 2
+                cls.pos[0] = pos[0] - cls.SIZE[0] / 2 # If axis not stated then use pos coordinate
                 
             if 'top' in kwargs and 'bottom' in kwargs:
-                raise TwoInputsOfSameAxis('top', 'bottom', 'y')
+                raise TwoInputsOfSameAxis('top', 'bottom', 'y') # Error as there can't have two cords on same axis
             elif 'top' in kwargs:
-                cls.pos[1] = kwargs['top'] - cls.SIZE[1]
+                cls.pos[1] = kwargs['top'] - cls.SIZE[1] # Set top of player to cord supplied
             elif 'bottom' in kwargs:
-                cls.pos[1] = kwargs['bottom']
+                cls.pos[1] = kwargs['bottom'] # Set bottom of player to cord supplied
             elif pos[1]:
-                cls.pos[1] = pos[1] - cls.SIZE[1] / 2
+                cls.pos[1] = pos[1] - cls.SIZE[1] / 2 # If axis not stated then use pos coordinate
         else:
-            cls.pos[0] = pos[0] - cls.SIZE[0] / 2
+            cls.pos[0] = pos[0] - cls.SIZE[0] / 2 # If kwargs not supplied then set player pos to supplied pos
             cls.pos[1] = pos[1] - cls.SIZE[1] / 2
     
     @classmethod
@@ -124,13 +131,14 @@ class player:
     
     @classmethod
     def move(cls):
-        cls.pos = [x + y for x, y in zip(cls.pos, cls.velocity)] # Makes player move
+        cls.pos = [i + j for i, j in zip(cls.pos, cls.velocity)] # Adds velocity to the players position to make it move
     
     @classmethod
     def bind(cls, map_rect): # Binds player to map
         
-        player_left, player_top, player_right, player_bottom = player.get_rect()
+        player_left, player_top, player_right, player_bottom = player.get_rect() # Get cords of the players sides
         
+        # If player side outside the wall, set player side to wall side and cancel velocity on x axis
         if player_left < map_rect[0]:
             player.set_pos(left=map_rect[0])
             player.velocity[0] = 0
@@ -138,6 +146,7 @@ class player:
             player.set_pos(right=map_rect[2])
             player.velocity[0] = 0
         
+        # If player top/bottom outside the roof/ground, set player top/bottom to roof/ground and cancel velocity on y axis
         if player_bottom < map_rect[1]:
             player.set_pos(bottom=map_rect[1])
             player.velocity[1] = 0
@@ -145,7 +154,6 @@ class player:
             player.set_pos(top=map_rect[3])
             player.velocity[1] = 0
 
-        
     @classmethod
     def display(cls):
         blit_image(sprite.player, player.PLAYER_CENTRE) # Draws player on centre of the screen
@@ -153,31 +161,26 @@ class player:
     
 class Level:
     def __init__(self, map_size, spawn_pos, *objects): # Get all parts of the level
-        self.map_size = map_size
-        self.map_rect = (0, 0, map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
-        self.spawn_pos = spawn_pos
+        self.MAP_SIZE = map_size
+        self.MAP_RECT = (0, 0, map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
+        self.SPAWN_POS = spawn_pos
         self.objects = objects
         
-        player.set_pos(right=spawn_pos[0], top=spawn_pos[1])
-    
-    def get_player_pos(self):
-        return (player.get_rel_offset_rect()[0], player.get_rel_offset_rect()[3])
+        self.set_player_pos(spawn_pos) # Set player to spawn position
+        
+    def set_player_pos(self, pos):
+        player.set_pos(left=pos[0], bottom=pos[1]) # Set player position (bottom left) to pos
     
     def bind_player(self): # Player stays in map
-        player.bind(self.map_rect)
+        player.bind(self.MAP_RECT)
     
     def display(self): # Display map
-        pygame.draw.rect(surface, color.SKYBLUE2, pygame.Rect(RENDER_OFFSET[0] + player.SIZE[0] + self.get_player_pos()[0], RENDER_OFFSET[1] - self.map_size[1] + self.get_player_pos()[1], self.map_rect[2], self.map_rect[3]))
+        pygame.draw.rect(surface, color.SKYBLUE2, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE), self.MAP_RECT[2], self.MAP_RECT[3])) # Render level game square
 
-class enemy:
-    SIZE = sprite.enemy.get_size()
-    
-    @classmethod
-    def display(cls):
-        blit_image(sprite.enemy, player.PLAYER_CENTRE)
+
 #--------------------Main--------------------
 
-current_level = Level((1200, 1200), (200, 1000))
+current_level = Level((500, 500), (0, 0)) # (sizex, sizey), (spawn pos)
 
 def main():
     running = True
@@ -200,6 +203,7 @@ def main():
 
 def render():
     
+    # While the main thread running
     while threading.main_thread().is_alive():
         
         # Render
@@ -207,11 +211,12 @@ def render():
         
         current_level.display()
         player.display()
-        #enemy.display()
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
-            
+
+# Create a thread for rendering
 thread = threading.Thread(target=render)
 thread.start()
 
+# Start main code
 main()
