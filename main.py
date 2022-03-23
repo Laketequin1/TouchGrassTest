@@ -1,5 +1,6 @@
 #--------------------Imports--------------------
 
+from re import X
 import pygame, threading
 pygame.init()
 
@@ -25,11 +26,12 @@ surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen
 finished = False
 
 class sprite:
-    player = pygame.image.load(IMAGE_FOLDER+"player.png").convert() #Loads player (convert to be more efficient as non transparent)
+    player = player = [pygame.image.load(IMAGE_FOLDER+f"player_frames/{i}.png").convert() for i in range(11)] #Loads player frames (convert to be more efficient as non transparent)
     tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
     enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert()
+    grass_platform = pygame.image.load(IMAGE_FOLDER+"enemy.png")
 #--------------------Functions--------------------
 
 def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
@@ -43,8 +45,8 @@ def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
 def get_player_pos():
     return (player.get_rel_offset_rect()[0], player.get_rel_offset_rect()[3]) # Return player pos (bottom left)
 
-def relitive_object_pos(pos, size): # Get render location of object on the screen from object pos relitive to player and size of object
-    pos = [i + j for i, j in zip(pos, get_player_pos())] # x + player_pos_x     and     y + player_pos_y
+def relitive_object_pos(pos, size, player_pos): # Get render location of object on the screen from object pos relitive to player and size of object
+    pos = [i + j for i, j in zip(pos, player_pos)] # x + player_pos_x     and     y + player_pos_y
     return (RENDER_OFFSET[0] + player.SIZE[0] + pos[0], RENDER_OFFSET[1] - size[1] + pos[1]) # Return relitive pos
 
 #--------------------Classes--------------------
@@ -54,9 +56,28 @@ class TwoInputsOfSameAxis(Exception):
     def __init__(self, value1, value2, x_or_y):
         super().__init__("The sides {} and {} are both being set on the {} axis".format(value1, value2, x_or_y))
 
+class Platform:
+    def __init__(self, x, y):
+        self.image = sprite.grass_platform
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+    def display(self, player_pos):
+        blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos))
+    
+    def update(self):
+        collide = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE))
+
+        if collide:
+            print("hit")
+            
+           
+
 class player:
     SCREEN_CENTRE = (1920/2, 1080/2) # Player location centred on screen
-    SIZE = sprite.player.get_size() # Size of player
+    SIZE = sprite.player[0].get_size() # Size of player
+
     PLAYER_CENTRE = (SCREEN_CENTRE[0] - SIZE[0] / 2, SCREEN_CENTRE[1] - SIZE[1] / 2)
     
     VELOCITY_INCREASE = 0.4 # The amount the player velocity increases each time
@@ -66,6 +87,9 @@ class player:
     velocity_resistance = DEFAULT_VELOCITY_RESISTANCE # Current air resistance
     velocity = [0, 0] # Players current velocity
     pos = [0, 0] # Players cordinate
+    
+    current_frame = 0
+    FRAME_SPEED = 0.05
     
     @classmethod
     def get_rel_offset_rect(cls): # Return the left of player, top of player, right of player, bottom of player with relitive to objects on screen
@@ -132,7 +156,7 @@ class player:
     @classmethod
     def move(cls):
         cls.pos = [i + j for i, j in zip(cls.pos, cls.velocity)] # Adds velocity to the players position to make it move
-    
+
     @classmethod
     def bind(cls, map_rect): # Binds player to map
         
@@ -156,31 +180,62 @@ class player:
 
     @classmethod
     def display(cls):
-        blit_image(sprite.player, player.PLAYER_CENTRE) # Draws player on centre of the screen
+        blit_image(sprite.player[round(cls.current_frame)], player.PLAYER_CENTRE) # Draws player on centre of the screen
+        cls.current_frame += cls.FRAME_SPEED
+        if cls.current_frame > 10:
+            cls.current_frame = 0
     
-    
+
+
 class Level:
-    def __init__(self, map_size, spawn_pos, *objects): # Get all parts of the level
+    def __init__(self, map_size, spawn_pos, objects): # Get all parts of the level
         self.MAP_SIZE = map_size
         self.MAP_RECT = (0, 0, map_size[0], map_size[1]) # Rect of map from 0, 0 to map_size
         self.SPAWN_POS = spawn_pos
         self.objects = objects
         
         self.set_player_pos(spawn_pos) # Set player to spawn position
-        
+    
     def set_player_pos(self, pos):
         player.set_pos(left=pos[0], bottom=pos[1]) # Set player position (bottom left) to pos
     
     def bind_player(self): # Player stays in map
         player.bind(self.MAP_RECT)
     
-    def display(self): # Display map
-        pygame.draw.rect(surface, color.SKYBLUE2, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE), self.MAP_RECT[2], self.MAP_RECT[3])) # Render level game square
+    def update_objects(self):
+        for object in self.objects:
+            object.update()
+    
+    def display_objects(self, player_pos):
+        for object in self.objects:
+            object.display(player_pos)
+    
+    def display(self, player_pos): # Display map
+        pygame.draw.rect(surface, color.SKYBLUE2, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE, player_pos), self.MAP_RECT[2], self.MAP_RECT[3] - 1)) # Render level game square
+
+
+class Enemy(): # Inherit from pygame sprite
+    def __init__(self, x, y):
+       self.rect = sprite.enemy.get_rect()
+       self.rect.x = x
+       self.rect.y = -y
+       self.move_direction = 1
+       self.move_counter = 0
+
+    def update(self):
+        self.rect.x += self.move_direction
+        self.move_counter += 1
+        if abs(self.move_counter) > 50:
+            self.move_direction *= -1
+            self.move_counter *= -1
+		    
+    def display(self, player_pos):
+        blit_image(sprite.enemy, relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), player_pos)) # Display enemy on screen relitive to player
 
 
 #--------------------Main--------------------
 
-current_level = Level((500, 500), (0, 0)) # (sizex, sizey), (spawn pos)
+current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(700, 700), Platform(500, -500)]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
 
 def main():
     running = True
@@ -197,20 +252,30 @@ def main():
         player.gravity()
         player.air_resistance()
         player.move()
+        
+        current_level.update_objects()
+        
         current_level.bind_player()
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
 def render():
     
+    
     # While the main thread running
     while threading.main_thread().is_alive():
+        
+        player_pos = get_player_pos()
         
         # Render
         surface.fill(color.GRAY20)
         
-        current_level.display()
+        current_level.display(player_pos)
+        current_level.display_objects(player_pos)
         player.display()
+        
+    
+        
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
 
