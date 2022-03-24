@@ -31,7 +31,7 @@ class sprite:
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
     enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert()
-    grass_platform = pygame.image.load(IMAGE_FOLDER+"enemy.png")
+    grass_platform = pygame.image.load(IMAGE_FOLDER+"grass_platform.png")
 #--------------------Functions--------------------
 
 def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
