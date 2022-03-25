@@ -1,8 +1,9 @@
 #--------------------Imports--------------------
 
-from re import X
+from pygame import mixer
 import pygame, threading
 pygame.init()
+mixer.init()
 
 from src import color # Imports lots of colors as RGB
 
@@ -11,6 +12,8 @@ from src import color # Imports lots of colors as RGB
 ORIGINAL_THREAD_COUNT = threading.activeCount()
 
 IMAGE_FOLDER = "images/" #The folder that holds all the image files
+SOUND_FOLDER = "sound/" #The sound folder to hold all sound filess
+
 DISPLAY_SIZE = (1920, 1080) # Screen size
 DEFAULT_TICK = 120 # Game tick speed
 
@@ -32,6 +35,7 @@ class sprite:
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
     enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert()
     grass_platform = pygame.image.load(IMAGE_FOLDER+"grass_platform.png")
+    
 #--------------------Functions--------------------
 
 def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
@@ -49,6 +53,11 @@ def relitive_object_pos(pos, size, player_pos): # Get render location of object 
     pos = [i + j for i, j in zip(pos, player_pos)] # x + player_pos_x     and     y + player_pos_y
     return (RENDER_OFFSET[0] + player.SIZE[0] + pos[0], RENDER_OFFSET[1] - size[1] + pos[1]) # Return relitive pos
 
+def MusicInit(): #Loads music
+	mixer.music.load(f"{SOUND_FOLDER}music.wav")#selects 
+	mixer.music.set_volume(0.2)#sets volume
+	mixer.music.play(-1)#loops forever
+
 #--------------------Classes--------------------
 
 # Raise custom error setting player pos
@@ -56,23 +65,30 @@ class TwoInputsOfSameAxis(Exception):
     def __init__(self, value1, value2, x_or_y):
         super().__init__("The sides {} and {} are both being set on the {} axis".format(value1, value2, x_or_y))
 
+
 class Platform:
     def __init__(self, x, y):
         self.image = sprite.grass_platform
         self.rect = self.image.get_rect()
         self.rect.x = x
-        self.rect.y = y
+        self.rect.y = -y
 
     def display(self, player_pos):
         blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos))
+        pygame.draw.rect(surface, color.WHITE, pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), 2)
     
     def update(self):
-        collide = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE))
+        
+        collide  = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE))
 
+        player_left, player_top, player_right, player_bottom = player.get_rect() # Get cords of the players sides
+        
+        # If player side outside the wall, set player side to wall side and cancel velocity on x axis
         if collide:
-            print("hit")
-            
-           
+            if player_left < self.rect.x + 40*2:
+                player.set_pos(left=self.rect.x + 40*2)
+                player.velocity[0] = 0
+              
 
 class player:
     SCREEN_CENTRE = (1920/2, 1080/2) # Player location centred on screen
@@ -184,6 +200,7 @@ class player:
         cls.current_frame += cls.FRAME_SPEED
         if cls.current_frame > 10:
             cls.current_frame = 0
+        pygame.draw.rect(surface, color.WHITE, pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE), 2)
     
 
 
@@ -235,7 +252,7 @@ class Enemy(): # Inherit from pygame sprite
 
 #--------------------Main--------------------
 
-current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(700, 700), Platform(500, -500)]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
+current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(700, 700), Platform(500, 500)]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
 
 def main():
     running = True
@@ -260,7 +277,7 @@ def main():
         clock.tick(DEFAULT_TICK) #FPS Speed
 
 def render():
-    
+    MusicInit()
     
     # While the main thread running
     while threading.main_thread().is_alive():
@@ -273,8 +290,6 @@ def render():
         current_level.display(player_pos)
         current_level.display_objects(player_pos)
         player.display()
-        
-    
         
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
