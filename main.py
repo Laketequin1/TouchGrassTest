@@ -15,7 +15,7 @@ IMAGE_FOLDER = "images/" #The folder that holds all the image files
 SOUND_FOLDER = "sound/" #The sound folder to hold all sound filess
 
 DISPLAY_SIZE = (1920, 1080) # Screen size
-DEFAULT_TICK = 120 # Game tick speed
+DEFAULT_TICK = 120 # Game tick speed   -   120
 
 DEFAULT_FPS = 160 # Game rendering FPS
 
@@ -29,7 +29,7 @@ surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen
 finished = False
 
 class sprite:
-    player = player = [pygame.image.load(IMAGE_FOLDER+f"player_frames/{i}.png").convert() for i in range(11)] #Loads player frames (convert to be more efficient as non transparent)
+    player = [pygame.image.load(IMAGE_FOLDER+f"player_frames/{i}.png").convert() for i in range(11)] #Loads player frames (convert to be more efficient as non transparent)
     tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
@@ -69,13 +69,13 @@ class TwoInputsOfSameAxis(Exception):
 class Platform:
     def __init__(self, x, y):
         self.image = sprite.grass_platform
+        self.SIZE = sprite.grass_platform.get_size()
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = -y
 
     def display(self, player_pos):
         blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos))
-        pygame.draw.rect(surface, color.WHITE, pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), 2)
     
     def update(self):
         
@@ -85,9 +85,12 @@ class Platform:
         
         # If player side outside the wall, set player side to wall side and cancel velocity on x axis
         if collide:
-            if player_left < self.rect.x + 40*2:
-                player.set_pos(left=self.rect.x + 40*2)
-                player.velocity[0] = 0
+            if player.velocity[1] < 0:
+                player.set_pos(bottom = self.rect.y - self.SIZE[1])
+                player.velocity[1] = 0
+            elif player.velocity[1] > 0:
+                player.set_pos(top = self.rect.y)
+                player.velocity[1] = 0
               
 
 class player:
@@ -139,9 +142,9 @@ class player:
             if 'top' in kwargs and 'bottom' in kwargs:
                 raise TwoInputsOfSameAxis('top', 'bottom', 'y') # Error as there can't have two cords on same axis
             elif 'top' in kwargs:
-                cls.pos[1] = kwargs['top'] - cls.SIZE[1] # Set top of player to cord supplied
+                cls.pos[1] = -kwargs['top'] - cls.SIZE[1] # Set top of player to cord supplied
             elif 'bottom' in kwargs:
-                cls.pos[1] = kwargs['bottom'] # Set bottom of player to cord supplied
+                cls.pos[1] = -kwargs['bottom'] # Set bottom of player to cord supplied
             elif pos[1]:
                 cls.pos[1] = pos[1] - cls.SIZE[1] / 2 # If axis not stated then use pos coordinate
         else:
@@ -180,28 +183,27 @@ class player:
         
         # If player side outside the wall, set player side to wall side and cancel velocity on x axis
         if player_left < map_rect[0]:
-            player.set_pos(left=map_rect[0])
+            player.set_pos(left = map_rect[0])
             player.velocity[0] = 0
         elif player_right > map_rect[2]:
-            player.set_pos(right=map_rect[2])
+            player.set_pos(right = map_rect[2])
             player.velocity[0] = 0
         
         # If player top/bottom outside the roof/ground, set player top/bottom to roof/ground and cancel velocity on y axis
         if player_bottom < map_rect[1]:
-            player.set_pos(bottom=map_rect[1])
+            player.set_pos(bottom = map_rect[1])
             player.velocity[1] = 0
         elif player_top > map_rect[3]:
-            player.set_pos(top=map_rect[3])
+            player.set_pos(top = -map_rect[3])
             player.velocity[1] = 0
 
     @classmethod
     def display(cls):
         blit_image(sprite.player[round(cls.current_frame)], player.PLAYER_CENTRE) # Draws player on centre of the screen
-        cls.current_frame += cls.FRAME_SPEED
-        if cls.current_frame > 10:
-            cls.current_frame = 0
-        pygame.draw.rect(surface, color.WHITE, pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE), 2)
-    
+        
+        cls.current_frame += cls.FRAME_SPEED # Changes player frame
+        if cls.current_frame > len(sprite.player) - 1: # If selected frame does not exist
+            cls.current_frame = 0 # Start on first frame    
 
 
 class Level:
