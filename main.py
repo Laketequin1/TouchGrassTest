@@ -68,18 +68,18 @@ class TwoInputsOfSameAxis(Exception):
 
 class Platform:
     def __init__(self, x, y):
-        self.image = sprite.grass_platform
-        self.SIZE = sprite.grass_platform.get_size()
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = -y
+        self.image = sprite.grass_platform # Gets sprite
+        self.SIZE = sprite.grass_platform.get_size() # Gets size of sprite
+        self.rect = self.image.get_rect() # Gets rectangle of sprite
+        self.rect.x = x # Gets platform x pos
+        self.rect.y = -y # Gets platform y pos
 
     def display(self, player_pos):
-        blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos))
+        blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos)) # Displays platform on screen reletive to player 
     
     def update(self):
         
-        collide  = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE))
+        collide  = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)) # Checks for collision between player and platform 
 
         player_left, player_top, player_right, player_bottom = player.get_rect() # Get cords of the players sides
         
@@ -234,19 +234,19 @@ class Level:
 
 
 class Enemy(): # Inherit from pygame sprite
-    def __init__(self, x, y):
-       self.rect = sprite.enemy.get_rect()
-       self.rect.x = x
-       self.rect.y = -y
-       self.move_direction = 1
-       self.move_counter = 0
+    def __init__(self, x, y): # Initlizes enemy
+       self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
+       self.rect.x = x # Gets enemys x coord 
+       self.rect.y = -y # Gets enemys y coord
+       self.move_direction = 1 # sets up var for movement from side to side
+       self.move_counter = 0 # Tracks enemy movemnt direction
 
     def update(self):
-        self.rect.x += self.move_direction
-        self.move_counter += 1
-        if abs(self.move_counter) > 50:
-            self.move_direction *= -1
-            self.move_counter *= -1
+        self.rect.x += self.move_direction 
+        self.move_counter += 1 # Adds 1 to counter
+        if abs(self.move_counter) > 50: # Checks if counter is above 50
+            self.move_direction *= -1 # Changes movement direction
+            self.move_counter *= -1 # Resets counter
 		    
     def display(self, player_pos):
         blit_image(sprite.enemy, relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), player_pos)) # Display enemy on screen relitive to player
@@ -254,7 +254,7 @@ class Enemy(): # Inherit from pygame sprite
 
 #--------------------Main--------------------
 
-current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(700, 700), Platform(500, 500)]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
+current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(700, 700), Platform(500, 500), Platform(100, 100)]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
 
 def main():
     running = True
