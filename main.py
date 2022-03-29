@@ -30,11 +30,13 @@ finished = False
 
 class sprite:
     player = [pygame.image.load(IMAGE_FOLDER+f"player_frames/{i}.png").convert() for i in range(11)] #Loads player frames (convert to be more efficient as non transparent)
-    tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
-    enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert()
-    grass_platform = pygame.image.load(IMAGE_FOLDER+"grass_platform.png")
+    enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert() #Loads enemy (convert to be more efficient as non transparent)
+    grass_platform = pygame.image.load(IMAGE_FOLDER+"grass_platform.png").convert() #Loads platform (convert to be more efficient as non transparent)
+    grass = pygame.image.load(IMAGE_FOLDER+"grass.png") #Loads grass (finish line)
+    
+    #tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image   (Not used)
     
 #--------------------Functions--------------------
 
@@ -64,33 +66,6 @@ def MusicInit(): #Loads music
 class TwoInputsOfSameAxis(Exception):
     def __init__(self, value1, value2, x_or_y):
         super().__init__("The sides {} and {} are both being set on the {} axis".format(value1, value2, x_or_y))
-
-
-class Platform:
-    def __init__(self, x, y):
-        self.image = sprite.grass_platform # Gets sprite
-        self.SIZE = sprite.grass_platform.get_size() # Gets size of sprite
-        self.rect = self.image.get_rect() # Gets rectangle of sprite
-        self.rect.x = x # Gets platform x pos
-        self.rect.y = -y # Gets platform y pos
-
-    def display(self, player_pos):
-        blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos)) # Displays platform on screen reletive to player 
-    
-    def update(self):
-        
-        collide  = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)) # Checks for collision between player and platform 
-
-        player_left, player_top, player_right, player_bottom = player.get_rect() # Get cords of the players sides
-        
-        # If player side outside the wall, set player side to wall side and cancel velocity on x axis
-        if collide:
-            if player.velocity[1] < 0:
-                player.set_pos(bottom = self.rect.y - self.SIZE[1])
-                player.velocity[1] = 0
-            elif player.velocity[1] > 0:
-                player.set_pos(top = self.rect.y)
-                player.velocity[1] = 0
               
 
 class player:
@@ -109,6 +84,9 @@ class player:
     
     current_frame = 0
     FRAME_SPEED = 0.05
+    
+    win = False
+    dead = 3
     
     @classmethod
     def get_rel_offset_rect(cls): # Return the left of player, top of player, right of player, bottom of player with relitive to objects on screen
@@ -247,14 +225,58 @@ class Enemy(): # Inherit from pygame sprite
         if abs(self.move_counter) > 50: # Checks if counter is above 50
             self.move_direction *= -1 # Changes movement direction
             self.move_counter *= -1 # Resets counter
-		    
+        
+        if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and enemy
+            player.dead = 0 # Player dead
+
     def display(self, player_pos):
         blit_image(sprite.enemy, relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), player_pos)) # Display enemy on screen relitive to player
 
 
+class Platform:
+    def __init__(self, x, y):
+        self.image = sprite.grass_platform # Gets sprite
+        self.SIZE = sprite.grass_platform.get_size() # Gets size of sprite
+        self.rect = self.image.get_rect() # Gets rectangle of sprite
+        self.rect.x = x # Gets platform x pos
+        self.rect.y = -y # Gets platform y pos
+
+    def display(self, player_pos):
+        blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos)) # Displays platform on screen reletive to player 
+    
+    def update(self):
+        
+        collide = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)) # Checks for collision between player and platform 
+
+        player_left, player_top, player_right, player_bottom = player.get_rect() # Get cords of the players sides
+        
+        # If player side outside the wall, set player side to wall side and cancel velocity on x axis
+        if collide:
+            if player.velocity[1] < 0:
+                player.set_pos(bottom = self.rect.y - self.SIZE[1])
+                player.velocity[1] = 0
+            elif player.velocity[1] > 0:
+                player.set_pos(top = self.rect.y)
+                player.velocity[1] = 0
+    
+    
+class Grass:
+    def __init__(self, pos):
+        self.pos = (pos[0], -pos[1]) # Position on map
+    
+    def display(self, player_pos):
+        blit_image(sprite.grass, relitive_object_pos(self.pos, sprite.grass.get_size(), player_pos)) # Displays grass on screen reletive to player 
+        
+    def update(self):
+        if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos(self.pos, sprite.grass.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and grass 
+            player.win = True # If colliding with grass win
+        else:
+            player.win = False
+            
+            
 #--------------------Main--------------------
 
-current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(700, 700), Platform(500, 500), Platform(100, 100)]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
+current_level = Level((1000, 1000), (0, 0), [Enemy(500, 0), Enemy(500, 200), Enemy(100, 500), Enemy(150, 500), Enemy(150, 200), Enemy(550, 0), Enemy(600, 0), Enemy(550, 200), Enemy(600, 200), Enemy(200, 200), Enemy(250, 200), Enemy(300, 200), Enemy(350, 200), Enemy(400, 200), Enemy(200, 200), Enemy(700, 700), Platform(500, 500), Platform(100, 100), Grass((520, 540))]) # (sizex, sizey), (spawn pos), [Enemy(), Platform()]
 
 def main():
     running = True
@@ -287,7 +309,13 @@ def render():
         player_pos = get_player_pos()
         
         # Render
-        surface.fill(color.GRAY20)
+        if player.win:
+            surface.fill(color.GREEN1) # If win background green
+        elif player.dead < 3:
+            surface.fill(color.RED1) # If dead background red
+            player.dead += 1 # Timer for displaying dead color
+        else:
+            surface.fill(color.GRAY20) # Normal background
         
         current_level.display(player_pos)
         current_level.display_objects(player_pos)
