@@ -33,7 +33,7 @@ class sprite:
     ground = pygame.image.load(IMAGE_FOLDER+"ground.png").convert() #Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER+"roof.png").convert() #Loads ground (convert to be more efficient as non transparent)
     enemy = pygame.image.load(IMAGE_FOLDER+"enemy.png").convert() #Loads enemy (convert to be more efficient as non transparent)
-    grass_platform = pygame.image.load(IMAGE_FOLDER+"grass_platform.png").convert() #Loads platform (convert to be more efficient as non transparent)
+    platform = pygame.image.load(IMAGE_FOLDER+"platform.png").convert() #Loads platform (convert to be more efficient as non transparent)
     grass = pygame.image.load(IMAGE_FOLDER+"grass.png") #Loads grass (finish line)
     
     #tree = pygame.image.load(IMAGE_FOLDER+"tree.png") #Loads tree image   (Not used)
@@ -81,6 +81,7 @@ class player:
     velocity_resistance = DEFAULT_VELOCITY_RESISTANCE # Current air resistance
     velocity = [0, 0] # Players current velocity
     pos = [0, 0] # Players cordinate
+    prev_pos = [0, 0] # Players previous cordinate
     
     current_frame = 0
     FRAME_SPEED = 0.05
@@ -93,8 +94,10 @@ class player:
         return (cls.pos[0] - cls.SIZE[0], cls.pos[1], cls.pos[0], cls.pos[1] + cls.SIZE[1])
 
     @classmethod
-    def get_rect(cls): # Return the left of player, top of player, right of player, bottom of player cords in map
-        return (-1 * cls.pos[0], cls.pos[1] + cls.SIZE[1], -1 * cls.pos[0] + cls.SIZE[0], cls.pos[1])
+    def get_rect(cls, prev=False): # Return the left of player, top of player, right of player, bottom of player cords in map (and previous cordinate)
+        if not prev: # Current pos
+            return (-1 * cls.pos[0], cls.pos[1] + cls.SIZE[1], -1 * cls.pos[0] + cls.SIZE[0], cls.pos[1])
+        return (-1 * cls.prev_pos[0], cls.prev_pos[1] + cls.SIZE[1], -1 * cls.prev_pos[0] + cls.SIZE[0], cls.prev_pos[1]) # Previous pos
 
     @classmethod
     def get_pos(cls): # Return centre of player with relitivity to screen
@@ -128,7 +131,9 @@ class player:
         else:
             cls.pos[0] = pos[0] - cls.SIZE[0] / 2 # If kwargs not supplied then set player pos to supplied pos
             cls.pos[1] = pos[1] - cls.SIZE[1] / 2
-    
+
+        cls.prev_pos = cls.pos
+        
     @classmethod
     def gravity(cls): # Player velocity moves down
         cls.velocity[1] -= cls.GRAVITY
@@ -152,6 +157,7 @@ class player:
     
     @classmethod
     def move(cls):
+        cls.prev_pos = cls.pos
         cls.pos = [i + j for i, j in zip(cls.pos, cls.velocity)] # Adds velocity to the players position to make it move
 
     @classmethod
@@ -235,30 +241,56 @@ class Enemy(): # Inherit from pygame sprite
 
 class Platform:
     def __init__(self, x, y):
-        self.image = sprite.grass_platform # Gets sprite
-        self.SIZE = sprite.grass_platform.get_size() # Gets size of sprite
+        self.image = sprite.platform # Gets sprite
+        self.SIZE = sprite.platform.get_size() # Gets size of sprite
         self.rect = self.image.get_rect() # Gets rectangle of sprite
         self.rect.x = x # Gets platform x pos
         self.rect.y = -y # Gets platform y pos
 
     def display(self, player_pos):
-        blit_image(sprite.grass_platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), player_pos)) # Displays platform on screen reletive to player 
+        blit_image(sprite.platform, relitive_object_pos((self.rect.x, self.rect.y), sprite.platform.get_size(), player_pos)) # Displays platform on screen reletive to player 
     
     def update(self):
         
-        collide = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.grass_platform.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)) # Checks for collision between player and platform 
+        collide = pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.platform.get_size(), get_player_pos()), *sprite.platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)) # Checks for collision between player and platform 
 
         player_left, player_top, player_right, player_bottom = player.get_rect() # Get cords of the players sides
+        player_prev_left, player_prev_top, player_prev_right, player_prev_bottom = player.get_rect(True) # Get cords of the players sides
+        
+        platform_left = self.rect.x
+        platform_top = self.rect.y
+        platform_right = self.rect.x + self.SIZE[0]
+        platform_bottom = self.rect.y + self.SIZE[1]
         
         # If player side outside the wall, set player side to wall side and cancel velocity on x axis
         if collide:
-            if player.velocity[1] < 0:
-                player.set_pos(bottom = self.rect.y - self.SIZE[1])
-                player.velocity[1] = 0
-            elif player.velocity[1] > 0:
-                player.set_pos(top = self.rect.y)
-                player.velocity[1] = 0
-    
+            if player.velocity[0] > 0: # Moving left
+                distance_x = player_prev_left - player_left
+                percent_past_wall_x = platform_right - player_left
+                percent_of_x = distance_x - percent_past_wall_x
+                
+                distance_y = player_prev_top - player_top
+                percent_of_y = percent_of_x * distance_y
+                y_location = player_top + percent_of_y
+                
+                if y_location > platform_bottom:
+                    player.set_pos(left = platform_right)
+                    player.velocity[0] = 0
+                    
+            elif player.velocity[0] < 0:
+                distance_x = player_prev_right - player_right
+                percent_past_wall_x = platform_left - player_right
+                percent_of_x = distance_x - percent_past_wall_x
+                
+                distance_y = player_prev_top + player_top
+                percent_of_y = percent_of_x * distance_y
+                y_location = player_top + percent_of_y
+                
+                if y_location > platform_bottom:
+                    player.set_pos(right = platform_left)
+                    player.velocity[0] = 0
+                
+                
     
 class Grass:
     def __init__(self, pos):
@@ -268,7 +300,7 @@ class Grass:
         blit_image(sprite.grass, relitive_object_pos(self.pos, sprite.grass.get_size(), player_pos)) # Displays grass on screen reletive to player 
         
     def update(self):
-        if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos(self.pos, sprite.grass.get_size(), get_player_pos()), *sprite.grass_platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and grass 
+        if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos(self.pos, sprite.grass.get_size(), get_player_pos()), *sprite.platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and grass 
             player.win = True # If colliding with grass win
         else:
             player.win = False
