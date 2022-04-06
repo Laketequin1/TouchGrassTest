@@ -9,8 +9,9 @@ from src import line_intersection # Imports a function that can get the intersec
 line_intersection = line_intersection.line_intersection # Imports function from import
 
 from src import collision # Imports a functions that test if boxes are colliding
-
 from src import color # Imports lots of colors as RGB
+
+from level import level0, level1 # Import levels
 
 print("\n")
 
@@ -485,8 +486,6 @@ class Grass:
     def update(self):
         if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos(self.pos, sprite.grass.get_size(), get_player_pos()), *sprite.platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and grass 
             player.win = True # If colliding with grass win
-        else:
-            player.win = False
             
 
 class Booster:
@@ -546,7 +545,6 @@ class Booster:
 
 #--------------------Main--------------------
 
-from level import level0
 current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
 
 menu = Menu((1000, 1000))
@@ -570,13 +568,15 @@ def main():
         if menu.active == True:
             if start_button.update():
                 menu.active = False
+                current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
             if exit_button.update():
                 exit()
         else:
             player.get_player_input()
             player.gravity()
             player.air_resistance()
-            player.move()
+            if not player.dead and not player.win:
+                player.move()
         
             current_level.update_objects()
             current_level.bind_player()
@@ -585,7 +585,6 @@ def main():
 
 def render(current_level):
     Music.start()
-    menu.active = True
     win = False
     settings = False
 
@@ -601,11 +600,10 @@ def render(current_level):
         # Render
         if player.win:
             surface.fill(color.GREEN1) # If win background green
-            win = True
         else:
             surface.fill(color.GRAY20) # Normal background
         
-        if win == True:
+        if player.win == True:
             current_level.display(player_pos)
             current_level.display_objects(player_pos)
             player.display()
@@ -618,9 +616,6 @@ def render(current_level):
             surface.blit(dead_text, (1920 / 2 - 250, 200))
             if reset_button.active == True:
                 button.display(reset_button)
-                if reset_button.update():
-                    current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
-                    player.dead = False
         elif menu.active == True:
             menu.display()
             if start_button.active and exit_button.active == True:
@@ -629,8 +624,6 @@ def render(current_level):
                 button.display(start_button)
                 button.display(settings_button)
                 button.display(exit_button)
-                if start_button.update():
-                    menu.active = False
         elif menu.active == False:
             current_level.display(player_pos)
             current_level.display_objects(player_pos)
