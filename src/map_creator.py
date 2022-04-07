@@ -28,4 +28,4 @@ for i, char in enumerate(line_input): # For each character
     elif char != ' ' and not char in DIRECTIONS: # Is not a space
         raise Exception("Unknown letter inputed!") # Error
 
-print(line) # Print line
+print(line[0:len(line) - 3) # Print line removing last comma and space
