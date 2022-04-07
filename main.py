@@ -11,7 +11,7 @@ line_intersection = line_intersection.line_intersection # Imports function from 
 from src import collision # Imports a functions that test if boxes are colliding
 from src import color # Imports lots of colors as RGB
 
-from level import level0, level1 # Import levels
+from level import level0, level1, level2 # Import levels
 
 print("\n")
 
@@ -545,7 +545,7 @@ class Booster:
 
 #--------------------Main--------------------
 
-current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
+current_level = level2.init(player, Level, Booster, Platform, Enemy, Grass)
 
 menu = Menu((1000, 1000))
 
@@ -568,12 +568,12 @@ def main():
         if menu.active == True:
             if start_button.update():
                 menu.active = False
-                current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
+                current_level = level2.init(player, Level, Booster, Platform, Enemy, Grass)
             if exit_button.update():
                 exit()
         elif player.dead:
             if reset_button.update():
-                current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
+                current_level = level2.init(player, Level, Booster, Platform, Enemy, Grass)
         else:
             player.get_player_input()
             player.gravity()
