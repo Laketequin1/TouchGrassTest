@@ -11,15 +11,13 @@ line_intersection = line_intersection.line_intersection # Imports function from 
 from src import collision # Imports a functions that test if boxes are colliding
 from src import color # Imports lots of colors as RGB
 
-from level import level0, level1, level2 # Import levels
-
 print("\n")
 
 #--------------------Variables--------------------
 
 ORIGINAL_THREAD_COUNT = threading.activeCount()
 
-MUSIC_DEFAULT_VOLUME = 0.08 # Default music volume
+MUSIC_DEFAULT_VOLUME = 0.07 # Default music volume
 
 IMAGE_FOLDER = "images/" # The folder that holds all the image files
 SOUND_FOLDER = "sound/" # The sound folder to hold all sound filess
@@ -154,6 +152,36 @@ class ChannelNotInt(Exception):
     def __init__(self, channel):
         super().__init__("The channel value {} is not and int.".format(channel))
 
+class levels:
+    current_level = 0 # Current level
+    levels = [] # List of all levels
+    
+    from level import level0, level1, level2 # Import levels
+    
+    levels.append(level0) # Add levels to list
+    levels.append(level1)
+    levels.append(level2)
+    
+    TOTAL_LEVELS = len(levels) # Get number of levels
+    
+    @classmethod
+    def set_level(cls, value):
+        cls.current_level = value # Set current level to value
+        
+    @classmethod
+    def get_level(cls):
+        return cls.current_level # Get current level value
+        
+    @classmethod
+    def next_level(cls):
+        cls.current_level += 1 # Set current level to value
+        
+        if cls.current_level > cls.TOTAL_LEVELS - 1: # Loop to first level if finished final level
+            cls.current_level = 0
+    
+    @classmethod
+    def start_level(cls):
+        return cls.levels[cls.current_level].init(player, Level, Booster, Platform, Enemy, Grass)
 
 class Music:
     
@@ -320,7 +348,7 @@ class player:
         elif cls.velocity[1] < -cls.MAX_VELOCITY:
             cls.velocity[1] = -cls.MAX_VELOCITY
         
-        cls.wind_sound.set_volume( ( abs(cls.velocity[0]) + abs(cls.velocity[1]) ) / (cls.MAX_VELOCITY * 1) + 0.3) # Set volume of wind higher if moving faster
+        cls.wind_sound.set_volume( ( abs(cls.velocity[0]) + abs(cls.velocity[1]) ) / (cls.MAX_VELOCITY * 0.9)) # Set volume of wind higher if moving faster
         
         cls.prev_pos = cls.pos # Save previous position of player
         
@@ -351,7 +379,11 @@ class player:
         elif player_top > map_rect[3]:
             cls.set_pos(top = map_rect[3])
             cls.velocity[1] = 0 # Cancel Velocity
-
+    
+    @classmethod
+    def set_wind_volume(cls, value): # Set wind volume for player
+        cls.wind_sound.set_volume(value) # Set volume of wind to value
+    
     @classmethod
     def display(cls):
         blit_image(sprite.player[math.floor(cls.current_frame)], player.PLAYER_CENTRE) # Draws player on centre of the screen
@@ -437,12 +469,13 @@ class Level:
 
 
 class Enemy(): # Inherit from pygame sprite
-    def __init__(self, x, y): # Initlizes enemy
-       self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
-       self.rect.x = x # Gets enemys x coord 
-       self.rect.y = -y # Gets enemys y coord
-       self.move_direction = 1 # sets up var for movement from side to side
-       self.move_counter = 0 # Tracks enemy movemnt direction
+    def __init__(self, pos): # Initlizes enemy
+        x, y = pos
+        self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
+        self.rect.x = x # Gets enemys x coord 
+        self.rect.y = -y # Gets enemys y coord
+        self.move_direction = 1 # sets up var for movement from side to side
+        self.move_counter = 0 # Tracks enemy movemnt direction
 
     def update(self):
         '''
@@ -460,7 +493,8 @@ class Enemy(): # Inherit from pygame sprite
 
 
 class Platform:
-    def __init__(self, x, y):
+    def __init__(self, pos):
+        x, y = pos
         self.image = sprite.platform # Gets sprite
         self.SIZE = sprite.platform.get_size() # Gets size of sprite
         self.rect = self.image.get_rect() # Gets rectangle of sprite
@@ -545,7 +579,7 @@ class Booster:
 
 #--------------------Main--------------------
 
-current_level = level2.init(player, Level, Booster, Platform, Enemy, Grass)
+player.current_level = levels.start_level()
 
 menu = Menu((1000, 1000))
 
@@ -555,6 +589,7 @@ reset_button = button(DISPLAY_SIZE[0] / 2 - sprite.reset_button.get_width(), DIS
 exit_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.exit_button)
 
 def main():
+
     running = True
     while running:
         # Get Events
@@ -565,15 +600,19 @@ def main():
                 if event.key == pygame.K_ESCAPE: # Checks if escape is pressed
                     menu.active = True
         
-        if menu.active == True:
+        if menu.active:
+            player.set_wind_volume(0)
             if start_button.update():
                 menu.active = False
-                current_level = level2.init(player, Level, Booster, Platform, Enemy, Grass)
+                levels.next_level()
+                player.current_level = levels.start_level()
             if exit_button.update():
                 exit()
         elif player.dead:
+            player.set_wind_volume(0)
             if reset_button.update():
-                current_level = level2.init(player, Level, Booster, Platform, Enemy, Grass)
+                levels.next_level()
+                player.current_level = levels.start_level()
         else:
             player.get_player_input()
             player.gravity()
@@ -581,16 +620,15 @@ def main():
             if not player.win:
                 player.move()
         
-            current_level.update_objects()
-            current_level.bind_player()
+            player.current_level.update_objects()
+            player.current_level.bind_player()
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
 
-def render(current_level):
+def render():
+    
     Music.start()
-    win = False
-    settings = False
 
     menu_text = font.render("Touch Grass", True, color.WHITE)
     win_text = font.render("YOU WIN!", True, color.WHITE)
@@ -616,27 +654,27 @@ def render(current_level):
                 button.display(settings_button)
                 button.display(exit_button)
         elif player.dead == True:
-            current_level.display(player_pos)
-            current_level.display_objects(player_pos)
+            player.current_level.display(player_pos)
+            player.current_level.display_objects(player_pos)
             player.display()
             surface.fill(color.RED2) # If dead background red
             surface.blit(dead_text, (1920 / 2 - 250, 200))
             button.display(reset_button)
         elif player.win == True:
-            current_level.display(player_pos)
-            current_level.display_objects(player_pos)
+            player.current_level.display(player_pos)
+            player.current_level.display_objects(player_pos)
             player.display()
             surface.blit(win_text, (1920 / 2 - 250, 200))
         else:
-            current_level.display(player_pos)
-            current_level.display_objects(player_pos)
+            player.current_level.display(player_pos)
+            player.current_level.display_objects(player_pos)
             player.display()
 
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
 
 # Create a thread for rendering
-thread = threading.Thread(target=render, args=(current_level,))
+thread = threading.Thread(target=render)
 thread.start()
 
 # Start main code
