@@ -550,9 +550,9 @@ current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
 menu = Menu((1000, 1000))
 
 start_button = button(1920 / 2 - 460, 1080 / 2, sprite.start_button)
-settings_button = button(1920 / 2 + 120  , 1080 / 2, sprite.settings_button)
-reset_button = button(1920 - 355 - 10  , 1080 - 140 - 10 , sprite.reset_button)
-exit_button = button(1920/ 2 - 165  , 1080 / 2 + 225 , sprite.exit_button)
+settings_button = button(1920 / 2 + 120, 1080 / 2, sprite.settings_button)
+reset_button = button(DISPLAY_SIZE[0] / 2 - sprite.reset_button.get_width(), DISPLAY_SIZE[1] / 2 - sprite.reset_button.get_height(), sprite.reset_button)
+exit_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.exit_button)
 
 def main():
     running = True
@@ -571,11 +571,14 @@ def main():
                 current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
             if exit_button.update():
                 exit()
+        elif player.dead:
+            if reset_button.update():
+                current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
         else:
             player.get_player_input()
             player.gravity()
             player.air_resistance()
-            if not player.dead and not player.win:
+            if not player.win:
                 player.move()
         
             current_level.update_objects()
@@ -603,20 +606,7 @@ def render(current_level):
         else:
             surface.fill(color.GRAY20) # Normal background
         
-        if player.win == True:
-            current_level.display(player_pos)
-            current_level.display_objects(player_pos)
-            player.display()
-            surface.blit(win_text, (1920 / 2 - 250, 200)) 
-        elif player.dead == True:
-            current_level.display(player_pos)
-            current_level.display_objects(player_pos)
-            player.display()
-            surface.fill(color.RED2) # If dead background red
-            surface.blit(dead_text, (1920 / 2 - 250, 200))
-            if reset_button.active == True:
-                button.display(reset_button)
-        elif menu.active == True:
+        if menu.active == True:
             menu.display()
             if start_button.active and exit_button.active == True:
                 surface.blit(menu_text, (1920 / 2 - 300, 250))
@@ -624,11 +614,22 @@ def render(current_level):
                 button.display(start_button)
                 button.display(settings_button)
                 button.display(exit_button)
-        elif menu.active == False:
+        elif player.dead == True:
             current_level.display(player_pos)
             current_level.display_objects(player_pos)
             player.display()
-    
+            surface.fill(color.RED2) # If dead background red
+            surface.blit(dead_text, (1920 / 2 - 250, 200))
+            button.display(reset_button)
+        elif player.win == True:
+            current_level.display(player_pos)
+            current_level.display_objects(player_pos)
+            player.display()
+            surface.blit(win_text, (1920 / 2 - 250, 200))
+        else:
+            current_level.display(player_pos)
+            current_level.display_objects(player_pos)
+            player.display()
 
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
