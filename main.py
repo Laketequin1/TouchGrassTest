@@ -586,6 +586,7 @@ def main():
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
+
 def render(current_level):
     Music.start()
     win = False
