@@ -1,4 +1,4 @@
-def init(player, Level, Booster, Platform, Enemy, Grass): # Restart level
+def init(color, player, Level, Booster, Platform, Enemy, Grass, GameText): # Restart level
     player.collisions_rects = [] # Reset colision rects for player
     player.velocity = [0, 0] # Reset colision rects for player
     player.dead = False

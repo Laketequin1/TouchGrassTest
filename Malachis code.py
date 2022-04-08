@@ -9,6 +9,7 @@ from src import line_intersection # Imports a function that can get the intersec
 line_intersection = line_intersection.line_intersection # Imports function from import
 
 from src import collision # Imports a functions that test if boxes are colliding
+
 from src import color # Imports lots of colors as RGB
 
 print("\n")
@@ -17,7 +18,7 @@ print("\n")
 
 ORIGINAL_THREAD_COUNT = threading.activeCount()
 
-MUSIC_DEFAULT_VOLUME = 0.07 # Default music volume
+MUSIC_DEFAULT_VOLUME = 0.08 # Default music volume
 
 IMAGE_FOLDER = "images/" # The folder that holds all the image files
 SOUND_FOLDER = "sound/" # The sound folder to hold all sound filess
@@ -36,7 +37,6 @@ clock = pygame.time.Clock() # Game tick handling
 surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen 
 
 font = pygame.font.Font("freesansbold.ttf", 95)
-game_text_font = pygame.font.Font("freesansbold.ttf", 40)
 
 finished = False
 
@@ -56,7 +56,9 @@ class sprite:
     settings_button = pygame.image.load(BUTTON_FOLDER + "settings.png") # Loads settings button
     reset_button = pygame.image.load(BUTTON_FOLDER + "reset.png") # Loads reset button
     exit_button = pygame.image.load(BUTTON_FOLDER + "exit.png") # Loads exit button
-    
+    mute_button = pygame.image.load(BUTTON_FOLDER + "mute.png") # Loads mute button
+    unmute_button = pygame.image.load(BUTTON_FOLDER + "unmute.png") # Loads mute button
+
 #--------------------Functions--------------------
 
 def blit_image(image, pos, size=1): # Displays (and resizes) image on screen
@@ -153,36 +155,6 @@ class ChannelNotInt(Exception):
     def __init__(self, channel):
         super().__init__("The channel value {} is not and int.".format(channel))
 
-class levels:
-    current_level = 0 # Current level
-    levels = [] # List of all levels
-    
-    from level import level0, level1, level2 # Import levels
-    
-    levels.append(level0) # Add levels to list
-    levels.append(level1)
-    levels.append(level2)
-    
-    TOTAL_LEVELS = len(levels) # Get number of levels
-    
-    @classmethod
-    def set_level(cls, value):
-        cls.current_level = value # Set current level to value
-        
-    @classmethod
-    def get_level(cls):
-        return cls.current_level # Get current level value
-        
-    @classmethod
-    def next_level(cls):
-        cls.current_level += 1 # Set current level to value
-        
-        if cls.current_level > cls.TOTAL_LEVELS - 1: # Loop to first level if finished final level
-            cls.current_level = 0
-    
-    @classmethod
-    def start_level(cls):
-        return cls.levels[cls.current_level].init(color, player, Level, Booster, Platform, Enemy, Grass, GameText)
 
 class Music:
     
@@ -349,7 +321,7 @@ class player:
         elif cls.velocity[1] < -cls.MAX_VELOCITY:
             cls.velocity[1] = -cls.MAX_VELOCITY
         
-        cls.wind_sound.set_volume( ( abs(cls.velocity[0]) + abs(cls.velocity[1]) ) / (cls.MAX_VELOCITY * 0.9)) # Set volume of wind higher if moving faster
+        cls.wind_sound.set_volume( ( abs(cls.velocity[0]) + abs(cls.velocity[1]) ) / (cls.MAX_VELOCITY * 1) + 0.3) # Set volume of wind higher if moving faster
         
         cls.prev_pos = cls.pos # Save previous position of player
         
@@ -380,11 +352,7 @@ class player:
         elif player_top > map_rect[3]:
             cls.set_pos(top = map_rect[3])
             cls.velocity[1] = 0 # Cancel Velocity
-    
-    @classmethod
-    def set_wind_volume(cls, value): # Set wind volume for player
-        cls.wind_sound.set_volume(value) # Set volume of wind to value
-    
+
     @classmethod
     def display(cls):
         blit_image(sprite.player[math.floor(cls.current_frame)], player.PLAYER_CENTRE) # Draws player on centre of the screen
@@ -471,16 +439,12 @@ class Level:
 
 
 class Enemy(): # Inherit from pygame sprite
-    def __init__(self, pos): # Initlizes enemy
-        x, y = pos
-        self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
-        self.rect.x = x # Gets enemys x coord 
-        self.rect.y = -y # Gets enemys y coord
-        self.move_direction = 1 # sets up var for movement from side to side
-        self.move_counter = 0 # Tracks enemy movemnt direction
-        
-        self.dead = False # Is dead
-        self.DEATH_VELOCITY = 23 # Velocity needed to kill self
+    def __init__(self, x, y): # Initlizes enemy
+       self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
+       self.rect.x = x # Gets enemys x coord 
+       self.rect.y = -y # Gets enemys y coord
+       self.move_direction = 1 # sets up var for movement from side to side
+       self.move_counter = 0 # Tracks enemy movemnt direction
 
     def update(self):
         '''
@@ -490,37 +454,15 @@ class Enemy(): # Inherit from pygame sprite
             self.move_direction *= -1 # Changes movement direction
             self.move_counter *= -1 # Resets counter
         '''
-        
-        if not self.dead:
-            if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and enemy
-                if abs(player.velocity[0]) + abs(player.velocity[1]) < self.DEATH_VELOCITY: # If slow
-                    player.dead = True # Player dead
-                else:
-                    self.dead = True # Kill enemy
+        if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and enemy
+            player.dead = True # Player dead
 
     def display(self, player_pos):
-        if not self.dead:
-            blit_image(sprite.enemy, relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), player_pos)) # Display enemy on screen relitive to player
-
-
-class GameText:
-    def __init__(self, pos, text, text_color):
-        self.pos = pos
-        self.display_text = game_text_font.render(text, True, text_color) # Font to display
-        self.text_color = text_color 
-        
-        self.SIZE = self.display_text.get_size() # Get width of image of text
-        
-    def display(self, player_pos):
-        blit_image(self.display_text, relitive_object_pos((self.pos[0], -self.pos[1]), self.SIZE, player_pos)) # Displays text relitive to player
-    
-    def update(self):
-        pass
+        blit_image(sprite.enemy, relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), player_pos)) # Display enemy on screen relitive to player
 
 
 class Platform:
-    def __init__(self, pos):
-        x, y = pos
+    def __init__(self, x, y):
         self.image = sprite.platform # Gets sprite
         self.SIZE = sprite.platform.get_size() # Gets size of sprite
         self.rect = self.image.get_rect() # Gets rectangle of sprite
@@ -546,7 +488,8 @@ class Grass:
     def update(self):
         if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos(self.pos, sprite.grass.get_size(), get_player_pos()), *sprite.platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and grass 
             player.win = True # If colliding with grass win
-            levels.next_level()
+        else:
+            player.win = False
             
 
 class Booster:
@@ -606,20 +549,19 @@ class Booster:
 
 #--------------------Main--------------------
 
-player.current_level = levels.start_level()
+from level import level0
+current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
 
 menu = Menu((1000, 1000))
 
 start_button = button(1920 / 2 - 460, 1080 / 2, sprite.start_button)
-next_button = button(1920 / 2 - sprite.start_button.get_width() / 2, 1080 / 2, sprite.start_button)
-settings_button = button(1920 / 2 + 120, 1080 / 2, sprite.settings_button)
-reset_button = button(DISPLAY_SIZE[0] / 2 - sprite.reset_button.get_width(), DISPLAY_SIZE[1] / 2 - sprite.reset_button.get_height(), sprite.reset_button)
-exit_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.exit_button)
-#mute_button = button(1920/ 2 - 285  , 1080 / 2 , sprite.mute_button)
-#unmute_button = button(1920 / 2 + 175, 1080 / 2 , sprite.unmute_button)
+settings_button = button(1920 / 2 + 120  , 1080 / 2, sprite.settings_button)
+reset_button = button(1920 - 355 - 10  , 1080 - 140 - 10 , sprite.reset_button)
+exit_button = button(1920/ 2 - 165  , 1080 / 2 + 225 , sprite.exit_button)
+mute_button = button(1920/ 2 - 285  , 1080 / 2 , sprite.mute_button)
+unmute_button = button(1920 / 2 + 175, 1080 / 2 , sprite.unmute_button)
 
 def main():
-
     running = True
     while running:
         # Get Events
@@ -628,80 +570,99 @@ def main():
                 running = False # Exit loop
             elif event.type == pygame.KEYDOWN: # Checks for key pressed key
                 if event.key == pygame.K_ESCAPE: # Checks if escape is pressed
+                    Settings.active = False
                     menu.active = True
+                    
         
-        if menu.active:
-            player.set_wind_volume(0)
+        if menu.active == True:
             if start_button.update():
                 menu.active = False
-                player.current_level = levels.start_level()
+                current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
             if exit_button.update():
                 exit()
         
-        elif player.dead:
-            player.set_wind_volume(0)
-            if reset_button.update():
-                player.current_level = levels.start_level()
-        elif player.win:
-            if next_button.update():
-                player.current_level = levels.start_level()
         else:
             player.get_player_input()
             player.gravity()
             player.air_resistance()
             player.move()
         
-            player.current_level.update_objects()
-            player.current_level.bind_player()
+            current_level.update_objects()
+            current_level.bind_player()
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
-
-def render():
-    
+def render(current_level):
     Music.start()
-
+    menu.active = True
+    win = False
+    settings = False
     menu_text = font.render("Touch Grass", True, color.WHITE)
-    win_text = font.render("Level Complete!", True, color.WHITE)
+    win_text = font.render("YOU WIN!", True, color.WHITE)
     dead_text = font.render("YOU DIED!", True, color.WHITE)
-
+    settings_text = font.render("Settings", True, color.WHITE)
     # While the main thread running
     while threading.main_thread().is_alive():
         
         player_pos = get_player_pos()
         
         # Render
-        surface.fill(color.GRAY20) # Normal background
+        if player.win:
+            surface.fill(color.GREEN1) # If win background green
+            win = True
+        else:
+            surface.fill(color.GRAY20) # Normal background
         
-        if menu.active == True:
+        if win == True:
+            current_level.display(player_pos)
+            current_level.display_objects(player_pos)
+            player.display()
+            surface.blit(win_text, (1920 / 2 - 250, 200)) 
+        elif player.dead == True:
+            current_level.display(player_pos)
+            current_level.display_objects(player_pos)
+            player.display()
+            surface.fill(color.RED2) # If dead background red
+            surface.blit(dead_text, (1920 / 2 - 250, 200))
+            if reset_button.active == True:
+                button.display(reset_button)
+                if reset_button.update():
+                    current_level = level0.init(player, Level, Booster, Platform, Enemy, Grass)
+                    player.dead = False
+        elif menu.active == True:
             menu.display()
-            if start_button.active and exit_button.active == True:
+            if start_button.active and settings_button and exit_button.active == True:
                 surface.blit(menu_text, (1920 / 2 - 300, 250))
                 surface.blit(sprite.cloud, (100, 100))
                 button.display(start_button)
                 button.display(settings_button)
                 button.display(exit_button)
-        elif player.dead == True:
-            player.current_level.display(player_pos)
-            player.current_level.display_objects(player_pos)
-            player.display()
-            surface.fill(color.RED2) # If dead background red
-            surface.blit(dead_text, (1920 / 2 - 250, 200))
-            button.display(reset_button)
-        elif player.win == True:
-            surface.fill(color.GREEN2) # Normal background
-            button.display(next_button)
-            surface.blit(win_text, (1920 / 2 - win_text.get_width()/2, 200))
-        else:
-            player.current_level.display(player_pos)
-            player.current_level.display_objects(player_pos)
-            player.display()
+                if start_button.update():
+                    menu.active = False
+                if settings_button.update():
+                    settings = True
+                    menu.active = False
+        elif settings == True:
+            Settings.display()
+            surface.blit(settings_text, (1920 / 2 - 215, 250))
+            surface.blit(sprite.cloud, (100, 100))
+            button.display(mute_button)
+            button.display(unmute_button)
+            button.display(exit_button)
+            if exit_button.update():
+                settings = False
+                menu.active = True
+        elif menu.active and settings == False:
+                current_level.display(player_pos)
+                current_level.display_objects(player_pos)
+                player.display()
+            
 
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
 
 # Create a thread for rendering
-thread = threading.Thread(target=render)
+thread = threading.Thread(target=render, args=(current_level,))
 thread.start()
 
 # Start main code
