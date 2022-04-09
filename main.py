@@ -1,6 +1,7 @@
 #--------------------Imports--------------------
 
 from pygame import mixer
+from sys import exit
 import pygame, threading, math
 pygame.init()
 mixer.init()
@@ -19,6 +20,7 @@ ORIGINAL_THREAD_COUNT = threading.activeCount()
 
 MUSIC_DEFAULT_VOLUME = 0.07 # Default music volume
 
+FONT_FOLDER = "font/" #  The folder for fonts
 IMAGE_FOLDER = "images/" # The folder that holds all the image files
 SOUND_FOLDER = "sound/" # The sound folder to hold all sound filess
 BUTTON_FOLDER = IMAGE_FOLDER+"buttons/"
@@ -35,8 +37,8 @@ clock = pygame.time.Clock() # Game tick handling
 
 surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen 
 
-font = pygame.font.Font("freesansbold.ttf", 95)
-game_text_font = pygame.font.Font("freesansbold.ttf", 40)
+font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 95)
+game_text_font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 40)
 
 finished = False
 
@@ -45,8 +47,6 @@ class sprite:
     booster = [pygame.image.load(IMAGE_FOLDER + f"booster_frames/{i}.png").convert() for i in range(4)] # Loads booster frames (convert to be more efficient as non transparent)
     booster_slow = [pygame.image.load(IMAGE_FOLDER + f"booster_slow_frames/{i}.png").convert() for i in range(4)] # Loads booster frames (convert to be more efficient as non transparent)
     
-    ground = pygame.image.load(IMAGE_FOLDER + "ground.png").convert() # Loads ground (convert to be more efficient as non transparent)
-    roof = pygame.image.load(IMAGE_FOLDER + "roof.png").convert() # Loads ground (convert to be more efficient as non transparent)
     enemy = pygame.image.load(IMAGE_FOLDER + "enemy.png").convert() # Loads enemy (convert to be more efficient as non transparent)
     platform = pygame.image.load(IMAGE_FOLDER + "platform.png").convert() # Loads platform (convert to be more efficient as non transparent)
     
