@@ -43,6 +43,7 @@ finished = False
 class sprite:
     player = [pygame.image.load(IMAGE_FOLDER + f"player_frames/{i}.png").convert() for i in range(11)] # Loads player frames (convert to be more efficient as non transparent)
     booster = [pygame.image.load(IMAGE_FOLDER + f"booster_frames/{i}.png").convert() for i in range(4)] # Loads booster frames (convert to be more efficient as non transparent)
+    booster_slow = [pygame.image.load(IMAGE_FOLDER + f"booster_slow_frames/{i}.png").convert() for i in range(4)] # Loads booster frames (convert to be more efficient as non transparent)
     
     ground = pygame.image.load(IMAGE_FOLDER + "ground.png").convert() # Loads ground (convert to be more efficient as non transparent)
     roof = pygame.image.load(IMAGE_FOLDER + "roof.png").convert() # Loads ground (convert to be more efficient as non transparent)
@@ -56,6 +57,13 @@ class sprite:
     settings_button = pygame.image.load(BUTTON_FOLDER + "settings.png") # Loads settings button
     reset_button = pygame.image.load(BUTTON_FOLDER + "reset.png") # Loads reset button
     exit_button = pygame.image.load(BUTTON_FOLDER + "exit.png") # Loads exit button
+    mute_button = pygame.image.load(BUTTON_FOLDER + "mute.png")
+    unmute_button = pygame.image.load(BUTTON_FOLDER + "unmute.png")
+    
+    cancel_button = pygame.image.load(BUTTON_FOLDER + "cancel.png") # Loads cancel button
+    pause_button = pygame.image.load(BUTTON_FOLDER + "pause.png") # Loads pause button
+    
+    heart = pygame.image.load(IMAGE_FOLDER + "heart.png") # Loads <3
     
 #--------------------Functions--------------------
 
@@ -84,9 +92,7 @@ def move_collisions_x(cls):
     for collisions_rect in cls.collisions_rects:
             
             platform_left = collisions_rect[0] # Get sides of platform
-            platform_bottom = collisions_rect[1]
             platform_right = collisions_rect[0] + collisions_rect[2]
-            platform_top = collisions_rect[1] + collisions_rect[3]
             
             x_pos = cls.pos[0] + cls.velocity[0] # New to be position of player
             y_pos = cls.pos[1]
@@ -111,9 +117,7 @@ def move_collisions_y(cls):
     
     for collisions_rect in cls.collisions_rects:
             
-            platform_left = collisions_rect[0] # Get sides of platform
-            platform_bottom = collisions_rect[1]
-            platform_right = collisions_rect[0] + collisions_rect[2]
+            platform_bottom = collisions_rect[1] # Vet values
             platform_top = collisions_rect[1] + collisions_rect[3]
             
             x_pos = cls.pos[0]
@@ -157,11 +161,13 @@ class levels:
     current_level = 0 # Current level
     levels = [] # List of all levels
     
-    from level import level0, level1, level2 # Import levels
+    from level import level0, level1, level2, level3, level4 # Import levels
     
     levels.append(level0) # Add levels to list
     levels.append(level1)
     levels.append(level2)
+    levels.append(level3)
+    levels.append(level4)
     
     TOTAL_LEVELS = len(levels) # Get number of levels
     
@@ -182,7 +188,7 @@ class levels:
     
     @classmethod
     def start_level(cls):
-        return cls.levels[cls.current_level].init(color, player, Level, Booster, Platform, Enemy, Grass, GameText)
+        return cls.levels[cls.current_level].init(color, levels, Menu, player, Level, Booster, Platform, Enemy, Grass, GameText, Heart)
 
 class Music:
     
@@ -395,12 +401,20 @@ class player:
 
 
 class Menu:
-    def __init__(self, map_size):
-        self.MAP_RECT = (0, 0, map_size[0], map_size[1])
-        self.active = True
+    
+    active = True
 
-    def display(self):
-        pygame.draw.rect(surface, color.SKYBLUE, pygame.Rect(0, 0, *DISPLAY_SIZE))
+    @classmethod
+    def activate(cls):
+        cls.active = True
+    
+    @classmethod
+    def deactivate(cls):
+        cls.active = False
+    
+    @staticmethod
+    def display():
+        surface.fill(color.SKYBLUE)
 
 
 class Settings:
@@ -413,13 +427,22 @@ class Settings:
 
 
 class button:
-    def __init__(self, x, y, image):
+    click_sound = Sound(5, 'click', 0.32) # Static (global) variable over button
+    
+    def __init__(self, x, y, image, size_multiplier = 1):
         self.image = image
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.clicked = False
         self.active = True
+        
+        self.rect.width *= size_multiplier
+        self.rect.height *= size_multiplier
+        
+        self.size_multiplier = size_multiplier
+        
+        self.SIZE = image.get_size() # Get size of image
 
     def update(self):
         
@@ -430,17 +453,24 @@ class button:
             pos = pygame.mouse.get_pos()
 
             if self.rect.collidepoint(pos):
-                    if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
-                        clicked = True
-                        self.clicked = True
+                if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+                    self.click_sound.play()
+                    clicked = True
+                    self.clicked = True
             
             if pygame.mouse.get_pressed()[0] == 0:
                 self.clicked = False
                          
             return clicked
     
-    def display(self):
-        surface.blit(self.image, self.rect)
+    def set_clicked(self, bool):
+        self.clicked = bool
+    
+    def display(self): # Optional Size Paramiter, default of 1
+        
+        image = pygame.transform.scale(self.image, (round(self.SIZE[0]  * self.size_multiplier), round(self.SIZE[1]  * self.size_multiplier))) # Resize image
+        
+        surface.blit(image, self.rect)
 
 
 class Level:
@@ -471,32 +501,56 @@ class Level:
 
 
 class Enemy(): # Inherit from pygame sprite
-    def __init__(self, pos): # Initlizes enemy
+    enemy_death_sound = Sound(2, 'enemy_death', 0.32) # Static (global) variable over enemy
+    player_death_sound = Sound(3, 'player_death', 0.35) # Static (global) variable over enemy
+    
+    def __init__(self, pos, move_direction=None, distance=0): # Initlizes enemy
         x, y = pos
         self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
         self.rect.x = x # Gets enemys x coord 
         self.rect.y = -y # Gets enemys y coord
-        self.move_direction = 1 # sets up var for movement from side to side
+        self.move_direction = move_direction # sets up var for movement from side to side
+        self.distance = distance # Distance enemy can move in that direction (pos is up and right)
+        
         self.move_counter = 0 # Tracks enemy movemnt direction
+        self.move_counter_direction = 1
+        
+        if distance > 0: # Get what direction player is moving left right up down
+            self.direction_pos = 1
+        elif distance < 0:
+            self.direction_pos = -1
+        else:
+            self.direction_pos = 0
+        
         
         self.dead = False # Is dead
-        self.DEATH_VELOCITY = 23 # Velocity needed to kill self
+        self.DEATH_VELOCITY = 23 # Player velocity needed to kill self
 
     def update(self):
-        '''
-        self.rect.x += self.move_direction 
-        self.move_counter += 1 # Adds 1 to counter
-        if abs(self.move_counter) > 50: # Checks if counter is above 50
-            self.move_direction *= -1 # Changes movement direction
-            self.move_counter *= -1 # Resets counter
-        '''
+        
+        self.move_counter += self.move_counter_direction
+        
+        if self.move_direction == 'x':
+            self.rect.x += self.move_counter_direction # Move x
+        elif self.move_direction == 'y':
+            self.rect.y += self.move_counter_direction # Move y
+        elif self.move_direction != None:
+            raise Exception(f"Enemy move direction {self.move_direction} not valid") # If something else error
+        
+        if self.move_counter > self.distance: # Checks if counter is above distance
+            self.move_counter_direction = -1 # Resets counter
+        elif self.move_counter < 0:
+            self.move_counter_direction = 1 # Resets counter
         
         if not self.dead:
             if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and enemy
                 if abs(player.velocity[0]) + abs(player.velocity[1]) < self.DEATH_VELOCITY: # If slow
                     player.dead = True # Player dead
+                    self.player_death_sound.play() # Play death sound
                 else:
                     self.dead = True # Kill enemy
+                    self.enemy_death_sound.play() # Play enemy death sound
+                    
 
     def display(self, player_pos):
         if not self.dead:
@@ -506,7 +560,9 @@ class Enemy(): # Inherit from pygame sprite
 class GameText:
     def __init__(self, pos, text, text_color):
         self.pos = pos
+            
         self.display_text = game_text_font.render(text, True, text_color) # Font to display
+            
         self.text_color = text_color 
         
         self.SIZE = self.display_text.get_size() # Get width of image of text
@@ -537,6 +593,8 @@ class Platform:
     
     
 class Grass:
+    win_sound = Sound(4, 'win', 0.05) # Static (global) variable over grass
+    
     def __init__(self, pos):
         self.pos = (pos[0], -pos[1]) # Position on map
     
@@ -546,54 +604,77 @@ class Grass:
     def update(self):
         if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos(self.pos, sprite.grass.get_size(), get_player_pos()), *sprite.platform.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and grass 
             player.win = True # If colliding with grass win
+            self.win_sound.play()
             levels.next_level()
-            
+
+
+class Heart: # Displays a heart (astetics)
+    def __init__(self, pos):
+        self.pos = (pos[0], -pos[1]) # Position on map
+    
+    def display(self, player_pos):
+        blit_image(sprite.heart, relitive_object_pos(self.pos, sprite.heart.get_size(), player_pos)) # Displays grass on screen reletive to player 
+        
+    def update(self):
+        pass
+
 
 class Booster:
     def __init__(self, pos, facing):
         self.SIZE = sprite.platform.get_size() # Gets size of sprite
         self.FRAME_SPEED = 0.03 # Frame speed
         
-        self.EXTRA_BOOST = 1.04 # Multiplier for boost
-        self.STATIC_BOOST = 1 # Definite speed for boost
+        self.SLOW_AMOUNT = 0.9 # Amount player slows
+        self.EXTRA_BOOST = 1.03 # Multiplier for boost
+        self.STATIC_BOOST = 0.5 # Definite speed for boost
         
         self.current_frame = 0
         self.image_frames = [*sprite.booster] # Set image frames to contents of sprite.booster, not the pointer of sprite.booster
+        self.slow_image_frames = [*sprite.booster_slow] # Set image frames to contents of sprite.booster, not the pointer of sprite.booster
         
         self.pos = pos # Position
         self.display_pos = (pos[0], -pos[1]) # Render position needs negitive y
         self.rect = [*self.pos, self.SIZE[0], self.SIZE[1]] # Rect of booster
         
+        self.slow_name = 'slow'
         self.faces = ['up', 'down', 'left', 'right'] # Possible directions
         self.faces_angle = { 'up': 270, 'down': 90, 'left': 0, 'right': 180} # Possible directions
         
         self.wind_sound = Sound(1, 'swish', 0.06)
         
-        if facing in self.faces: # If input for facing direction is allowed
+        if facing in self.faces or facing == self.slow_name: # If input for facing direction exists, or is slow
             self.facing = facing
         else:
             raise Facing(facing, self.faces) # Error, as variable is not in direction
         
-        for i, image in enumerate(self.image_frames): # Enumerate through each frame
-            for face in self.faces: # Go through each possible facing direction
-                if facing == face: # If facing this direction
-                    self.image_frames[i] = pygame.transform.rotate(image, self.faces_angle[facing]) # Rotate image of booster by set angle from self.faces_angle using facing direction, and change image in frames
+        if self.facing == self.slow_name: # If slow booster
+            self.image_frames = self.slow_image_frames # Set frames to slow
+        else:
+            for i, image in enumerate(self.image_frames): # Enumerate through each frame
+                for face in self.faces: # Go through each possible facing direction
+                    if facing == face: # If facing this direction
+                        self.image_frames[i] = pygame.transform.rotate(image, self.faces_angle[facing]) # Rotate image of booster by set angle from self.faces_angle using facing direction, and change image in frames
                     
     def update(self):
         
         player_left, _, _, player_bottom = player.get_rect() # Get sides of player we need, discard the rest (_)
         
         if collision.CheckCollision(self.rect, [player_left, player_bottom, *player.SIZE]): # If player colliding with booster
-            self.wind_sound.play() # Play sound
             
             if self.facing == 'left': # If booster facing left
                 player.velocity = [-(abs(player.velocity[0]) + abs(player.velocity[1]) + self.STATIC_BOOST) * self.EXTRA_BOOST, 0] # Player goes vroom left
+                self.wind_sound.play() # Play sound
             elif self.facing == 'right': # If booster facing right
                 player.velocity = [(abs(player.velocity[0]) + abs(player.velocity[1]) + self.STATIC_BOOST) * self.EXTRA_BOOST, 0] # Player goes vroom right
+                self.wind_sound.play() # Play sound
             elif self.facing == 'up': # If booster facing up
                 player.velocity = [0, (abs(player.velocity[0]) + abs(player.velocity[1]) + self.STATIC_BOOST) * self.EXTRA_BOOST] # Player goes vroom up
-            else: # If booster facing down
+                self.wind_sound.play() # Play sound
+            elif self.facing == 'down': # If booster facing down
                 player.velocity = [0, -(abs(player.velocity[0]) + abs(player.velocity[1]) + self.STATIC_BOOST) * self.EXTRA_BOOST] # Player goes vroom down
+                self.wind_sound.play() # Play sound
+            else: # Slow booster:
+                player.velocity = [player.velocity[0] * self.SLOW_AMOUNT, player.velocity[1] * self.SLOW_AMOUNT] # Slow player
 
     def display(self, player_pos):
         
@@ -608,15 +689,15 @@ class Booster:
 
 player.current_level = levels.start_level()
 
-menu = Menu((1000, 1000))
-
 start_button = button(1920 / 2 - 460, 1080 / 2, sprite.start_button)
 next_button = button(1920 / 2 - sprite.start_button.get_width() / 2, 1080 / 2, sprite.start_button)
 settings_button = button(1920 / 2 + 120, 1080 / 2, sprite.settings_button)
-reset_button = button(DISPLAY_SIZE[0] / 2 - sprite.reset_button.get_width(), DISPLAY_SIZE[1] / 2 - sprite.reset_button.get_height(), sprite.reset_button)
+reset_button = button(DISPLAY_SIZE[0] / 2 - sprite.reset_button.get_width() * 1.5 / 2, DISPLAY_SIZE[1] - sprite.reset_button.get_height() * 1.5 - 350, sprite.reset_button, 1.5)
 exit_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.exit_button)
-#mute_button = button(1920/ 2 - 285  , 1080 / 2 , sprite.mute_button)
-#unmute_button = button(1920 / 2 + 175, 1080 / 2 , sprite.unmute_button)
+mute_button = button(1920/ 2 - 285  , 1080 / 2 , sprite.mute_button)
+unmute_button = button(1920 / 2 + 175, 1080 / 2 , sprite.unmute_button)
+cancel_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.cancel_button)
+pause_button = button(5, 5, sprite.pause_button, 0.5)
 
 def main():
 
@@ -628,42 +709,65 @@ def main():
                 running = False # Exit loop
             elif event.type == pygame.KEYDOWN: # Checks for key pressed key
                 if event.key == pygame.K_ESCAPE: # Checks if escape is pressed
-                    menu.active = True
+                    Menu.active = True
         
-        if menu.active:
+        if Menu.active:
             player.set_wind_volume(0)
             if start_button.update():
-                menu.active = False
+                Menu.active = False
                 player.current_level = levels.start_level()
             if exit_button.update():
                 exit()
-        
+            if settings_button.update():
+                unmute_button.set_clicked(True)
+                Menu.active = False
+                Settings.active = True
+        elif Settings.active:
+            if cancel_button.update():
+                exit_button.set_clicked(True)
+                Settings.active = False
+                Menu.active = True
+            if mute_button.update():
+                Music.pause()
+            if unmute_button.update():
+                Music.unpause()
         elif player.dead:
             player.set_wind_volume(0)
             if reset_button.update():
                 player.current_level = levels.start_level()
+            elif pause_button.update(): # If pause button clicked
+                Menu.active = True # Go to main menu
         elif player.win:
             if next_button.update():
                 player.current_level = levels.start_level()
+            elif pause_button.update(): # If pause button clicked
+                Menu.active = True # Go to main menu
         else:
-            player.get_player_input()
+            player.get_player_input() # Update player
             player.gravity()
             player.air_resistance()
             player.move()
         
-            player.current_level.update_objects()
-            player.current_level.bind_player()
+            player.current_level.bind_player() # Run first time to calculate for object
+            player.current_level.update_objects() # Update level
+            player.current_level.bind_player() # Then after objects changed pos
+            
+            if pause_button.update(): # If pause button clicked
+                Menu.active = True # Go to main menu
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
 
 def render():
-    
     Music.start()
+
+    Menu.active = True
+    Settings.active = False
 
     menu_text = font.render("Touch Grass", True, color.WHITE)
     win_text = font.render("Level Complete!", True, color.WHITE)
     dead_text = font.render("YOU DIED!", True, color.WHITE)
+    settings_text = font.render("Settings", True, color.WHITE)
 
     # While the main thread running
     while threading.main_thread().is_alive():
@@ -673,14 +777,21 @@ def render():
         # Render
         surface.fill(color.GRAY20) # Normal background
         
-        if menu.active == True:
-            menu.display()
-            if start_button.active and exit_button.active == True:
+        if Menu.active == True:
+            Menu.display()
+            if start_button.active and exit_button.active and settings_button.active == True:
                 surface.blit(menu_text, (1920 / 2 - 300, 250))
                 surface.blit(sprite.cloud, (100, 100))
                 button.display(start_button)
                 button.display(settings_button)
                 button.display(exit_button)
+        elif Settings.active:
+            Settings.display()
+            surface.blit(settings_text, (1920 / 2 - 215, 250))
+            surface.blit(sprite.cloud, (100, 100))
+            button.display(mute_button)
+            button.display(unmute_button)
+            button.display(cancel_button)
         elif player.dead == True:
             player.current_level.display(player_pos)
             player.current_level.display_objects(player_pos)
@@ -688,14 +799,20 @@ def render():
             surface.fill(color.RED2) # If dead background red
             surface.blit(dead_text, (1920 / 2 - 250, 200))
             button.display(reset_button)
+            
+            pause_button.display() # Display pause button at half size
         elif player.win == True:
             surface.fill(color.GREEN2) # Normal background
             button.display(next_button)
             surface.blit(win_text, (1920 / 2 - win_text.get_width()/2, 200))
+            
+            pause_button.display() # Display pause button at half size
         else:
             player.current_level.display(player_pos)
             player.current_level.display_objects(player_pos)
             player.display()
+            
+            pause_button.display() # Display pause button at half size
 
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
