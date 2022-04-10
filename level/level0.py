@@ -11,7 +11,7 @@ def init(color, level, menu, player, Level, Booster, Platform, Enemy, Grass, Gam
                 Platform((160, 0)), Platform((320, 0)), Grass((760, 0)),
                 
                 # Text
-                GameText((0, 220), "Move with WASD!", color.GOLDENROD1),
+                GameText((0, 220), "Move with WASD or arrow keys!", color.GOLDENROD1),
                 GameText((420, -55), "Touch grass to win!", color.GOLDENROD1)
             ]
     

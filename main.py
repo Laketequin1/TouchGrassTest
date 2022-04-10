@@ -2,7 +2,7 @@
 
 from pygame import mixer
 from sys import exit
-import pygame, threading, math
+import pygame, threading, math, random
 pygame.init()
 mixer.init()
 
@@ -34,6 +34,7 @@ clock = pygame.time.Clock() # Game tick handling
 
 surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen 
 
+background_color = color.SKYBLUE2
 font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 95)
 game_text_font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 40)
 
@@ -331,13 +332,13 @@ class player:
     def get_player_input(cls):
         keys_pressed = pygame.key.get_pressed() #Gets all pressed keys
         
-        if keys_pressed[pygame.K_w]:
+        if keys_pressed[pygame.K_w] or keys_pressed[pygame.K_UP]: # Move up
             cls.velocity[1] += cls.VELOCITY_INCREASE # Increase velocity
-        if keys_pressed[pygame.K_a]:
+        if keys_pressed[pygame.K_a] or keys_pressed[pygame.K_LEFT]: # Move left
             cls.velocity[0] -= cls.VELOCITY_INCREASE # Increase velocity
-        if keys_pressed[pygame.K_s]:
+        if keys_pressed[pygame.K_s] or keys_pressed[pygame.K_DOWN]: # Move down
             cls.velocity[1] -= cls.VELOCITY_INCREASE # Increase velocity
-        if keys_pressed[pygame.K_d]:
+        if keys_pressed[pygame.K_d] or keys_pressed[pygame.K_RIGHT]: # Move right
             cls.velocity[0] += cls.VELOCITY_INCREASE # Increase velocity
     
     @classmethod
@@ -410,8 +411,8 @@ class Menu:
         cls.active = False
     
     @staticmethod
-    def display():
-        surface.fill(color.SKYBLUE)
+    def display(background_color):
+        surface.fill(background_color)
 
 
 class Settings:
@@ -419,8 +420,8 @@ class Settings:
         self.MAP_RECT = (0, 0, map_size[0], map_size[1])
         self.actve = False
     
-    def display():
-        pygame.draw.rect(surface, color.SKYBLUE, pygame.Rect(0, 0, *DISPLAY_SIZE))
+    def display(background_color):
+        pygame.draw.rect(surface, background_color, pygame.Rect(0, 0, *DISPLAY_SIZE))
 
 
 class button:
@@ -493,8 +494,8 @@ class Level:
         for object in self.objects: # Display all objects in level
             object.display(player_pos)
     
-    def display(self, player_pos): # Display map
-        pygame.draw.rect(surface, color.SKYBLUE2, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE, player_pos), self.MAP_RECT[2], self.MAP_RECT[3] - 1)) # Render level game square
+    def display(self, player_pos, background_color): # Display map
+        pygame.draw.rect(surface, background_color, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE, player_pos), self.MAP_RECT[2], self.MAP_RECT[3] - 1)) # Render level game square
 
 
 class Enemy(): # Inherit from pygame sprite
@@ -695,6 +696,9 @@ mute_button = button(1920/ 2 - 285  , 1080 / 2 , sprite.mute_button)
 unmute_button = button(1920 / 2 + 175, 1080 / 2 , sprite.unmute_button)
 cancel_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.cancel_button)
 pause_button = button(5, 5, sprite.pause_button, 0.5)
+cloud_button = button(100, 100, sprite.cloud)
+
+cloud_button.background_color = background_color
 
 def main():
 
@@ -710,6 +714,8 @@ def main():
         
         if Menu.active:
             player.set_wind_volume(0)
+            if cloud_button.update():
+                cloud_button.background_color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
             if start_button.update():
                 Menu.active = False
                 player.current_level = levels.start_level()
@@ -775,22 +781,22 @@ def render():
         surface.fill(color.GRAY20) # Normal background
         
         if Menu.active == True:
-            Menu.display()
+            Menu.display(cloud_button.background_color)
             if start_button.active and exit_button.active and settings_button.active == True:
                 surface.blit(menu_text, (1920 / 2 - 300, 250))
-                surface.blit(sprite.cloud, (100, 100))
+                button.display(cloud_button)
                 button.display(start_button)
                 button.display(settings_button)
                 button.display(exit_button)
         elif Settings.active:
-            Settings.display()
+            Settings.display(cloud_button.background_color)
             surface.blit(settings_text, (1920 / 2 - 215, 250))
-            surface.blit(sprite.cloud, (100, 100))
+            button.display(cloud_button)
             button.display(mute_button)
             button.display(unmute_button)
             button.display(cancel_button)
         elif player.dead == True:
-            player.current_level.display(player_pos)
+            player.current_level.display(player_pos, cloud_button.background_color)
             player.current_level.display_objects(player_pos)
             player.display()
             surface.fill(color.RED2) # If dead background red
@@ -805,7 +811,7 @@ def render():
             
             pause_button.display() # Display pause button at half size
         else:
-            player.current_level.display(player_pos)
+            player.current_level.display(player_pos, cloud_button.background_color)
             player.current_level.display_objects(player_pos)
             player.display()
             
