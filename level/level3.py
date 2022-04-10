@@ -30,7 +30,7 @@ def init(color, level, menu, player, Level, Booster, Platform, Enemy, Grass, Gam
                 
                 GameText((60, 650), "Credit to...", color.GOLDENROD1),
                 GameText((60, 600), "Tequin Lake", color.GOLDENROD1),
-                GameText((60, 550), "Malachi Malachi", color.GOLDENROD1),
+                GameText((60, 550), "Malachi Lang", color.GOLDENROD1),
                 
                 GameText((60, 400), "Special thanks to...", color.GOLDENROD1),
                 GameText((60, 350), "Lloyd", color.GOLDENROD1),
