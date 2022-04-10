@@ -790,7 +790,7 @@ def render():
                 button.display(exit_button)
         elif Settings.active:
             Settings.display(cloud_button.background_color)
-            surface.blit(settings_text, (1920 / 2 - 215, 250))
+            surface.blit(settings_text, (1920 / 2 - settings_text.get_width() / 2, 250))
             button.display(cloud_button)
             button.display(mute_button)
             button.display(unmute_button)
