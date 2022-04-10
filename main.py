@@ -6,9 +6,6 @@ import pygame, threading, math
 pygame.init()
 mixer.init()
 
-from src import line_intersection # Imports a function that can get the intersection of two lines
-line_intersection = line_intersection.line_intersection # Imports function from import
-
 from src import collision # Imports a functions that test if boxes are colliding
 from src import color # Imports lots of colors as RGB
 
@@ -524,7 +521,7 @@ class Enemy(): # Inherit from pygame sprite
         
         
         self.dead = False # Is dead
-        self.DEATH_VELOCITY = 23 # Player velocity needed to kill self
+        self.DEATH_VELOCITY = 22 # Player velocity needed to kill self
 
     def update(self):
         
