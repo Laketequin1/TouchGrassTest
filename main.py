@@ -1,7 +1,7 @@
 #--------------------Imports--------------------
 
 from pygame import mixer
-from sys import exit
+from sys import exit # Imports exit to prevent errors with exe
 import pygame, threading, math, random
 pygame.init()
 mixer.init()
@@ -12,8 +12,6 @@ from src import color # Imports lots of colors as RGB
 print("\n")
 
 #--------------------Variables--------------------
-
-ORIGINAL_THREAD_COUNT = threading.activeCount()
 
 MUSIC_DEFAULT_VOLUME = 0.07 # Default music volume
 
@@ -34,11 +32,11 @@ clock = pygame.time.Clock() # Game tick handling
 
 surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen 
 
-background_color = color.SKYBLUE2
-font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 95)
-game_text_font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 40)
+background_color = color.SKYBLUE2 # Set background color
+font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 95) # Font used in the game
+game_text_font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 40) # Smaller font used in the game
 
-finished = False
+finished = False # Game running
 
 class sprite:
     player = [pygame.image.load(IMAGE_FOLDER + f"player_frames/{i}.png").convert() for i in range(11)] # Loads player frames (convert to be more efficient as non transparent)
@@ -78,7 +76,7 @@ def get_player_pos():
 
 def relitive_object_pos(pos, size, player_pos): # Get render location of object on the screen from object pos relitive to player and size of object
     
-    render_pos = [None, None]
+    render_pos = [None, None] # Set list to change variebles
     
     render_pos[0] = pos[0] - player_pos[0] # x + player_pos_x 
     render_pos[1] = pos[1] + player_pos[1] # y + player_pos_y
@@ -108,12 +106,12 @@ def move_collisions_x(cls):
                 has_collided = True
                 
     if not has_collided:
-        cls.pos[0] += cls.velocity[0] # Adds x velocity to the players x position to make it move
+        cls.pos[0] += cls.velocity[0] # Adds x velocity to the players x position to make it move if not collided
 
 def move_collisions_y(cls):
     has_collided = False
     
-    for collisions_rect in cls.collisions_rects:
+    for collisions_rect in cls.collisions_rects: # For each platform rect
             
             platform_bottom = collisions_rect[1] # Vet values
             platform_top = collisions_rect[1] + collisions_rect[3]
@@ -155,38 +153,40 @@ class ChannelNotInt(Exception):
     def __init__(self, channel):
         super().__init__("The channel value {} is not and int.".format(channel))
 
+
 class levels:
-    current_level = 0 # Current level
-    levels = [] # List of all levels
-    
-    from level import level0, level1, level2, level3, level4 # Import levels
-    
-    levels.append(level0) # Add levels to list
-    levels.append(level1)
-    levels.append(level2)
-    levels.append(level3)
-    levels.append(level4)
-    
-    TOTAL_LEVELS = len(levels) # Get number of levels
-    
-    @classmethod
-    def set_level(cls, value):
-        cls.current_level = value # Set current level to value
+        current_level = 0 # Current level
+        levels = [] # List of all levels
         
-    @classmethod
-    def get_level(cls):
-        return cls.current_level # Get current level value
+        from level import level0, level1, level2, level3, level4 # Import levels
         
-    @classmethod
-    def next_level(cls):
-        cls.current_level += 1 # Set current level to value
+        levels.append(level0) # Add levels to list
+        levels.append(level1)
+        levels.append(level2)
+        levels.append(level3)
+        levels.append(level4)
         
-        if cls.current_level > cls.TOTAL_LEVELS - 1: # Loop to first level if finished final level
-            cls.current_level = 0
-    
-    @classmethod
-    def start_level(cls):
-        return cls.levels[cls.current_level].init(color, levels, Menu, player, Level, Booster, Platform, Enemy, Grass, GameText, Heart)
+        TOTAL_LEVELS = len(levels) # Get number of levels
+        
+        @classmethod
+        def set_level(cls, value):
+            cls.current_level = value # Set current level to value
+            
+        @classmethod
+        def get_level(cls):
+            return cls.current_level # Get current level value
+            
+        @classmethod
+        def next_level(cls):
+            cls.current_level += 1 # Set current level to value
+            
+            if cls.current_level > cls.TOTAL_LEVELS - 1: # Loop to first level if finished final level
+                cls.current_level = 0
+        
+        @classmethod
+        def start_level(cls):
+            return cls.levels[cls.current_level].init(color, levels, Menu, player, Level, Booster, Platform, Enemy, Grass, GameText, Heart) # Restart level, giving it variables we are using
+
 
 class Music:
     
@@ -270,8 +270,8 @@ class player:
     win = False
     dead = False
     
-    wind_sound = Sound(0, 'wind', 0)
-    wind_sound.start()
+    wind_sound = Sound(0, 'wind', 0) # Wind sound
+    wind_sound.start() # Start wind sound
     
     @classmethod
     def get_rel_offset_rect(cls): # Return the left of player, top of player, right of player, bottom of player with relitive to objects on screen
@@ -403,15 +403,15 @@ class Menu:
     active = True
 
     @classmethod
-    def activate(cls):
+    def activate(cls): # Set to active
         cls.active = True
     
     @classmethod
-    def deactivate(cls):
+    def deactivate(cls): # Set to unactive
         cls.active = False
     
     @staticmethod
-    def display(background_color):
+    def display(background_color): # Fill background with background_color
         surface.fill(background_color)
 
 
@@ -420,23 +420,23 @@ class Settings:
         self.MAP_RECT = (0, 0, map_size[0], map_size[1])
         self.actve = False
     
-    def display(background_color):
-        pygame.draw.rect(surface, background_color, pygame.Rect(0, 0, *DISPLAY_SIZE))
+    def display(background_color): # Fill background with background_color
+        surface.fill(background_color)
 
 
 class button:
     click_sound = Sound(5, 'click', 0.32) # Static (global) variable over button
     
     def __init__(self, x, y, image, size_multiplier = 1):
-        self.image = image
-        self.rect = self.image.get_rect()
+        self.image = image # Set image of self
+        self.rect = self.image.get_rect() # Get rect of image
         self.rect.x = x
         self.rect.y = y
         self.clicked = False
         self.active = True
         
-        self.rect.width *= size_multiplier
-        self.rect.height *= size_multiplier
+        self.rect.width *= size_multiplier # Change width
+        self.rect.height *= size_multiplier # Change height
         
         self.size_multiplier = size_multiplier
         
@@ -444,31 +444,31 @@ class button:
 
     def update(self):
         
-        if self.active:
+        clicked = False # Not clicked 
+        
+        if self.active and not self.clicked: # If active and button not previously clicked
 
-            clicked = False
+            pos = pygame.mouse.get_pos() # Get pos of mouse
 
-            pos = pygame.mouse.get_pos()
+            if self.rect.collidepoint(pos): # If mouse on button
+                if pygame.mouse.get_pressed()[0] == 1: # If mouse down and not self.clicked
+                    self.click_sound.play() # Play click sound
+                    clicked = True # Set clicked to true
+                    self.clicked = True # Set previous clicked to True
 
-            if self.rect.collidepoint(pos):
-                if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
-                    self.click_sound.play()
-                    clicked = True
-                    self.clicked = True
-            
-            if pygame.mouse.get_pressed()[0] == 0:
-                self.clicked = False
-                         
-            return clicked
+        if pygame.mouse.get_pressed()[0] == 0: # If not mousedown
+            self.clicked = False # Set previous clicked to False
+        
+        return clicked # Return if clicked or not
     
-    def set_clicked(self, bool):
+    def set_clicked(self, bool): # Set clicked to True/False
         self.clicked = bool
     
     def display(self): # Optional Size Paramiter, default of 1
         
         image = pygame.transform.scale(self.image, (round(self.SIZE[0]  * self.size_multiplier), round(self.SIZE[1]  * self.size_multiplier))) # Resize image
         
-        surface.blit(image, self.rect)
+        surface.blit(image, self.rect) # Display button at screen pos
 
 
 class Level:
@@ -559,7 +559,7 @@ class GameText:
     def __init__(self, pos, text, text_color):
         self.pos = pos
             
-        self.display_text = game_text_font.render(text, True, text_color) # Font to display
+        self.display_text = game_text_font.render(text, True, text_color) # Set font to display
             
         self.text_color = text_color 
         
@@ -581,7 +581,7 @@ class Platform:
         self.rect.x = x # Gets platform x pos
         self.rect.y = y # Gets platform y pos
         
-        player.collisions_rects.append(self.rect)
+        player.collisions_rects.append(self.rect) # Set player platforms collisions rects
 
     def display(self, player_pos):
         blit_image(sprite.platform, relitive_object_pos((self.rect.x, -self.rect.y), sprite.platform.get_size(), player_pos)) # Displays platform on screen reletive to player 
@@ -606,7 +606,7 @@ class Grass:
             levels.next_level()
 
 
-class Heart: # Displays a heart (astetics)
+class Heart: # Displays a heart (aesthetics)
     def __init__(self, pos):
         self.pos = (pos[0], -pos[1]) # Position on map
     
@@ -685,8 +685,9 @@ class Booster:
 
 #--------------------Main--------------------
 
-player.current_level = levels.start_level()
+player.current_level = levels.start_level() # Start first level
 
+# Create buttons, setting pos, sprite, and size
 start_button = button(1920 / 2 - 460, 1080 / 2, sprite.start_button)
 next_button = button(1920 / 2 - sprite.start_button.get_width() / 2, 1080 / 2, sprite.start_button)
 settings_button = button(1920 / 2 + 120, 1080 / 2, sprite.settings_button)
@@ -698,7 +699,10 @@ cancel_button = button(1920 / 2 - 165, 1080 / 2 + 225, sprite.cancel_button)
 pause_button = button(5, 5, sprite.pause_button, 0.5)
 cloud_button = button(100, 100, sprite.cloud)
 
+# Set cloud_button background_color to to access over threads
 cloud_button.background_color = background_color
+
+#--------------------Main--------------------
 
 def main():
 
@@ -710,39 +714,40 @@ def main():
                 running = False # Exit loop
             elif event.type == pygame.KEYDOWN: # Checks for key pressed key
                 if event.key == pygame.K_ESCAPE: # Checks if escape is pressed
-                    Menu.active = True
+                    Menu.active = True # Open menu
+                    Settings.active = False # Exit settings
         
-        if Menu.active:
-            player.set_wind_volume(0)
-            if cloud_button.update():
-                cloud_button.background_color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255))
-            if start_button.update():
-                Menu.active = False
-                player.current_level = levels.start_level()
-            if exit_button.update():
-                exit()
-            if settings_button.update():
-                unmute_button.set_clicked(True)
-                Menu.active = False
-                Settings.active = True
-        elif Settings.active:
-            if cancel_button.update():
-                exit_button.set_clicked(True)
-                Settings.active = False
-                Menu.active = True
-            if mute_button.update():
-                Music.pause()
-            if unmute_button.update():
-                Music.unpause()
-        elif player.dead:
-            player.set_wind_volume(0)
-            if reset_button.update():
-                player.current_level = levels.start_level()
+        if Menu.active: # If menu active
+            player.set_wind_volume(0) # Stop player wind noise
+            if cloud_button.update(): # If cloud_button clicked
+                cloud_button.background_color = (random.randint(50, 255), random.randint(50, 255), random.randint(50, 255)) # Set background color to random color
+            if start_button.update(): # If start_button clicked
+                Menu.active = False # Deactivate menu
+                player.current_level = levels.start_level() # Start level
+            if exit_button.update(): # Exit button pressed
+                exit() # Exit
+            if settings_button.update(): # Settings button pressed
+                unmute_button.set_clicked(True) # Setclicked for unmute button to true so it can't be immediately pressed
+                Menu.active = False # Close menu
+                Settings.active = True # Activate settings
+        elif Settings.active: # If settings active
+            if cancel_button.update(): # If cancel button pressed
+                exit_button.set_clicked(True) # Setclicked for exit button to true so it can't be immediately pressed
+                Settings.active = False # Exit settings
+                Menu.active = True # Open menu
+            if mute_button.update(): # If mute button pressed
+                Music.pause() # Pause music
+            if unmute_button.update(): # If unmute button pressed
+                Music.unpause() # Unpause music
+        elif player.dead: # If player dead
+            player.set_wind_volume(0) # Stop wind
+            if reset_button.update(): # If reset button clicked
+                player.current_level = levels.start_level() # Restart level
             elif pause_button.update(): # If pause button clicked
                 Menu.active = True # Go to main menu
-        elif player.win:
-            if next_button.update():
-                player.current_level = levels.start_level()
+        elif player.win: # If player won
+            if next_button.update(): # If next_button clicked
+                player.current_level = levels.start_level() # Restart level
             elif pause_button.update(): # If pause button clicked
                 Menu.active = True # Go to main menu
         else:
@@ -760,13 +765,15 @@ def main():
 
         clock.tick(DEFAULT_TICK) #FPS Speed
 
+#--------------------Render--------------------
 
 def render():
-    Music.start()
+    Music.start() # Play music
 
-    Menu.active = True
-    Settings.active = False
+    Menu.active = True # Menu open
+    Settings.active = False # Settings closed
 
+    # Create text for player
     menu_text = font.render("Touch Grass", True, color.WHITE)
     win_text = font.render("Level Complete!", True, color.WHITE)
     dead_text = font.render("YOU DIED!", True, color.WHITE)
@@ -775,30 +782,27 @@ def render():
     # While the main thread running
     while threading.main_thread().is_alive():
         
-        player_pos = get_player_pos()
+        player_pos = get_player_pos() # Get player position, so its synced throughout render
         
         # Render
         surface.fill(color.GRAY20) # Normal background
         
-        if Menu.active == True:
+        if Menu.active == True: # If menu active, display menu
             Menu.display(cloud_button.background_color)
-            if start_button.active and exit_button.active and settings_button.active == True:
+            if start_button.active and exit_button.active and settings_button.active == True: # If buttons active display text, and buttons
                 surface.blit(menu_text, (1920 / 2 - 300, 250))
                 button.display(cloud_button)
                 button.display(start_button)
                 button.display(settings_button)
                 button.display(exit_button)
-        elif Settings.active:
+        elif Settings.active: # If menu active, display settings, text and buttons
             Settings.display(cloud_button.background_color)
             surface.blit(settings_text, (1920 / 2 - settings_text.get_width() / 2, 250))
             button.display(cloud_button)
             button.display(mute_button)
             button.display(unmute_button)
             button.display(cancel_button)
-        elif player.dead == True:
-            player.current_level.display(player_pos, cloud_button.background_color)
-            player.current_level.display_objects(player_pos)
-            player.display()
+        elif player.dead == True: # If player dead display background, dead text, and button
             surface.fill(color.RED2) # If dead background red
             surface.blit(dead_text, (1920 / 2 - 250, 200))
             button.display(reset_button)
@@ -811,14 +815,16 @@ def render():
             
             pause_button.display() # Display pause button at half size
         else:
-            player.current_level.display(player_pos, cloud_button.background_color)
-            player.current_level.display_objects(player_pos)
+            player.current_level.display(player_pos, cloud_button.background_color) # Display level with background color
+            player.current_level.display_objects(player_pos) # Display everything in level
             player.display()
             
             pause_button.display() # Display pause button at half size
 
         pygame.display.flip()
         clock.tick(DEFAULT_FPS) #FPS Speed
+
+#--------------------Start--------------------
 
 # Create a thread for rendering
 thread = threading.Thread(target=render)
