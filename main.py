@@ -15,7 +15,9 @@ print("\n")
 
 MUSIC_DEFAULT_VOLUME = 0.07 # Default music volume
 
-FONT_FOLDER = "font/" #  The folder for fonts
+SRC_FOLDER = "src/" # The source folder
+ICON_FOLDER = SRC_FOLDER + "icon/" # The source folder
+FONT_FOLDER = "font/" # The folder for fonts
 IMAGE_FOLDER = "images/" # The folder that holds all the image files
 SOUND_FOLDER = "sound/" # The sound folder to hold all sound filess
 BUTTON_FOLDER = IMAGE_FOLDER+"buttons/"
@@ -30,7 +32,9 @@ GROUND_OFFSET = 800 # The ground pos relitive to top screen when player on y
 
 clock = pygame.time.Clock() # Game tick handling
 
-surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen 
+surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen
+pygame.display.set_icon(pygame.image.load(ICON_FOLDER + 'grass.ico')) # Set icon of window
+pygame.display.set_caption('Touch Grass') # Set name of window
 
 background_color = color.SKYBLUE2 # Set background color
 font = pygame.font.Font(FONT_FOLDER + "freesansbold.ttf", 95) # Font used in the game
