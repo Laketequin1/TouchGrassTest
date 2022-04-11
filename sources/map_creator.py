@@ -1,8 +1,10 @@
+# The # character states that a custom block exists there. It acts as a comment, and does nothing except skip the block (like a space)
+
 BLOCK_WIDTH = 40 # Width of blocks
 
 NORMAL_BLOCKS = {'p':'Platform', 'e':'Enemy', 'g':'Grass'} # All blocks just needing pos
-
 DIRECTIONS = {'^':'"up"', '<':'"left"', '_':'"down"', '>':'"right"', 'x':'"slow"'} # Directions for Booster
+ENEMY_INVINCIBLE = 'i'
 
 line = "" # String with blocks line
 lines_input = [] # List will all lines
@@ -42,6 +44,9 @@ for j, line_input in enumerate(lines_input): # For each line
             direction = DIRECTIONS[char] # Get direction of booster
             
             line += f"Booster(({ BLOCK_WIDTH * i }, { height - BLOCK_WIDTH * (j + 1) }), { direction }), " # Add block to line
+        
+        elif char == ENEMY_INVINCIBLE: # Invincible enemy
+            line += f"Enemy(({ BLOCK_WIDTH * i }, { height - BLOCK_WIDTH * (j + 1) }), True), " # Add block to line
         
         elif char != ' ' and char != '#': # Is not a space or comment
             raise Exception(f"Unknown letter {char} inputed!") # Error

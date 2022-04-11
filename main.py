@@ -1,8 +1,10 @@
 #--------------------Imports--------------------
 
+from turtle import distance
 from pygame import mixer
 from sys import exit # Imports exit to prevent errors with exe
 import pygame, threading, math, random
+
 pygame.init()
 mixer.init()
 
@@ -33,7 +35,7 @@ GROUND_OFFSET = 800 # The ground pos relitive to top screen when player on y
 clock = pygame.time.Clock() # Game tick handling
 
 surface = pygame.display.set_mode(DISPLAY_SIZE, pygame.NOFRAME) # Create screen
-pygame.display.set_icon(pygame.image.load(ICON_FOLDER + 'grass.ico')) # Set icon of window
+pygame.display.set_icon(pygame.image.load(ICON_FOLDER + 'grass.ico')) # Set icon of window 
 pygame.display.set_caption('Touch Grass') # Set name of window
 
 background_color = color.SKYBLUE2 # Set background color
@@ -48,6 +50,7 @@ class sprite:
     booster_slow = [pygame.image.load(IMAGE_FOLDER + f"booster_slow_frames/{i}.png").convert() for i in range(4)] # Loads booster frames (convert to be more efficient as non transparent)
     
     enemy = pygame.image.load(IMAGE_FOLDER + "enemy.png").convert() # Loads enemy (convert to be more efficient as non transparent)
+    enemy_invincible = pygame.image.load(IMAGE_FOLDER + "enemy_invincible.png").convert() # Loads enemy (convert to be more efficient as non transparent)
     platform = pygame.image.load(IMAGE_FOLDER + "platform.png").convert() # Loads platform (convert to be more efficient as non transparent)
     
     grass = pygame.image.load(IMAGE_FOLDER + "grass.png") # Loads grass (finish line)
@@ -84,7 +87,7 @@ def relitive_object_pos(pos, size, player_pos): # Get render location of object 
     
     render_pos[0] = pos[0] - player_pos[0] # x + player_pos_x 
     render_pos[1] = pos[1] + player_pos[1] # y + player_pos_y
-    return (RENDER_OFFSET[0] - player.SIZE[0] + render_pos[0], RENDER_OFFSET[1] - size[1] + render_pos[1]) # Return relitive pos
+    return (math.floor(RENDER_OFFSET[0] - player.SIZE[0] + render_pos[0]), math.floor(RENDER_OFFSET[1] - size[1] + render_pos[1])) # Return relitive pos
 
 def move_collisions_x(cls):
     has_collided = False
@@ -162,13 +165,15 @@ class levels:
         current_level = 0 # Current level
         levels = [] # List of all levels
         
-        from level import level0, level1, level2, level3, level4 # Import levels
+        from level import level0, level1, level2, level3, level4, level_c, level_f # Import levels
         
         levels.append(level0) # Add levels to list
         levels.append(level1)
         levels.append(level2)
         levels.append(level3)
         levels.append(level4)
+        levels.append(level_c)
+        levels.append(level_f)
         
         TOTAL_LEVELS = len(levels) # Get number of levels
         
@@ -499,14 +504,14 @@ class Level:
             object.display(player_pos)
     
     def display(self, player_pos, background_color): # Display map
-        pygame.draw.rect(surface, background_color, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE, player_pos), self.MAP_RECT[2], self.MAP_RECT[3] - 1)) # Render level game square
+        pygame.draw.rect(surface, background_color, pygame.Rect(*relitive_object_pos((0, 0), self.MAP_SIZE, player_pos), self.MAP_RECT[2], self.MAP_RECT[3])) # Render level game square
 
 
 class Enemy(): # Inherit from pygame sprite
     enemy_death_sound = Sound(2, 'enemy_death', 0.32) # Static (global) variable over enemy
     player_death_sound = Sound(3, 'player_death', 0.35) # Static (global) variable over enemy
     
-    def __init__(self, pos, move_direction=None, distance=0): # Initlizes enemy
+    def __init__(self, pos, invincible=False, move_direction=None, distance=0, speed = 1, delay = 0): # Initlizes enemy
         x, y = pos
         self.rect = sprite.enemy.get_rect() # Gets rectangle of enemy sprite
         self.rect.x = x # Gets enemys x coord 
@@ -514,20 +519,36 @@ class Enemy(): # Inherit from pygame sprite
         self.move_direction = move_direction # sets up var for movement from side to side
         self.distance = distance # Distance enemy can move in that direction (pos is up and right)
         
+        self.speed = speed # How fast it moves
+        
         self.move_counter = 0 # Tracks enemy movemnt direction
-        self.move_counter_direction = 1
-        
-        if distance > 0: # Get what direction player is moving left right up down
-            self.direction_pos = 1
-        elif distance < 0:
-            self.direction_pos = -1
-        else:
-            self.direction_pos = 0
-        
+        self.move_counter_direction = speed
         
         self.dead = False # Is dead
-        self.DEATH_VELOCITY = 22 # Player velocity needed to kill self
-
+        
+        if not invincible: # If can be killed
+            self.DEATH_VELOCITY = 24 # Player velocity needed to kill self
+            self.image = sprite.enemy
+        else:
+            self.DEATH_VELOCITY = 9999 # Player velocity needed to kill self impossibly high
+            self.image = sprite.enemy_invincible
+        
+        # The best I can do without rewriting Malachi's code
+        for x in range(delay):
+            self.move_counter += self.move_counter_direction
+        
+            if self.move_direction == 'x':
+                self.rect.x += self.move_counter_direction # Move x
+            elif self.move_direction == 'y':
+                self.rect.y += self.move_counter_direction # Move y
+            elif self.move_direction != None:
+                raise Exception(f"Enemy move direction {self.move_direction} not valid") # If something else error
+            
+            if self.move_counter + self.speed > self.distance: # Checks if counter is above distance
+                self.move_counter_direction = -self.speed # Resets counter
+            elif self.move_counter - self.speed < 0:
+                self.move_counter_direction = self.speed # Resets counter
+        
     def update(self):
         
         self.move_counter += self.move_counter_direction
@@ -539,13 +560,13 @@ class Enemy(): # Inherit from pygame sprite
         elif self.move_direction != None:
             raise Exception(f"Enemy move direction {self.move_direction} not valid") # If something else error
         
-        if self.move_counter > self.distance: # Checks if counter is above distance
-            self.move_counter_direction = -1 # Resets counter
-        elif self.move_counter < 0:
-            self.move_counter_direction = 1 # Resets counter
+        if self.move_counter + self.speed > self.distance: # Checks if counter is above distance
+            self.move_counter_direction = -self.speed # Resets counter
+        elif self.move_counter - self.speed < 0:
+            self.move_counter_direction = self.speed # Resets counter
         
         if not self.dead:
-            if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), get_player_pos()), *sprite.enemy.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and enemy
+            if pygame.Rect.colliderect(pygame.Rect(*relitive_object_pos((self.rect.x, self.rect.y), self.image.get_size(), get_player_pos()), *self.image.get_size()), pygame.Rect(*player.PLAYER_CENTRE, *player.SIZE)): # Checks for collision between player and enemy
                 if abs(player.velocity[0]) + abs(player.velocity[1]) < self.DEATH_VELOCITY: # If slow
                     player.dead = True # Player dead
                     self.player_death_sound.play() # Play death sound
@@ -556,7 +577,7 @@ class Enemy(): # Inherit from pygame sprite
 
     def display(self, player_pos):
         if not self.dead:
-            blit_image(sprite.enemy, relitive_object_pos((self.rect.x, self.rect.y), sprite.enemy.get_size(), player_pos)) # Display enemy on screen relitive to player
+            blit_image(self.image, relitive_object_pos((self.rect.x, self.rect.y), self.image.get_size(), player_pos)) # Display enemy on screen relitive to player
 
 
 class GameText:
@@ -626,7 +647,7 @@ class Booster:
         self.SIZE = sprite.platform.get_size() # Gets size of sprite
         self.FRAME_SPEED = 0.03 # Frame speed
         
-        self.SLOW_AMOUNT = 0.9 # Amount player slows
+        self.SLOW_AMOUNT = 0.8 # Amount player slows
         self.EXTRA_BOOST = 1.03 # Multiplier for boost
         self.STATIC_BOOST = 0.5 # Definite speed for boost
         
